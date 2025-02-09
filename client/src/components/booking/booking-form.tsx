@@ -18,7 +18,8 @@ import { LocationData } from "@/pages/booking-page";
 import VehicleSelect from "./vehicle-select";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 
 type Props = {
   onLocationSelect: (data: LocationData) => void;
@@ -26,25 +27,44 @@ type Props = {
 };
 
 async function searchLocation(query: string) {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      query
-    )}`
-  );
-  const data = await response.json();
-  return data[0] ? {
-    address: data[0].display_name,
-    coords: {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-    },
-  } : null;
+  if (!query.trim()) return null;
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        query.trim()
+      )}&limit=1`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch location');
+    }
+
+    const data = await response.json();
+    if (!data.length) return null;
+
+    return {
+      address: data[0].display_name,
+      coords: {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+      },
+    };
+  } catch (error) {
+    console.error('Location search error:', error);
+    return null;
+  }
 }
 
 export default function BookingForm({ onLocationSelect, locationData }: Props) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isSearching, setIsSearching] = useState(false);
+  const [pickupSearch, setPickupSearch] = useState("");
+  const [dropoffSearch, setDropoffSearch] = useState("");
+
+  const debouncedPickupSearch = useDebounce(pickupSearch, 500);
+  const debouncedDropoffSearch = useDebounce(dropoffSearch, 500);
 
   const form = useForm({
     resolver: zodResolver(insertBookingSchema),
@@ -68,7 +88,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
         description: "Your transport has been successfully booked.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      setLocation("/bookings");
+      setLocation("/");
     },
     onError: (error: Error) => {
       toast({
@@ -79,39 +99,69 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
     },
   });
 
-  const handleLocationSearch = async (type: "pickup" | "dropoff", query: string) => {
-    if (!query) return;
+  useEffect(() => {
+    async function performSearch() {
+      if (!debouncedPickupSearch) return;
 
-    setIsSearching(true);
-    try {
-      const location = await searchLocation(query);
-      if (location) {
-        const newLocationData = {
-          ...locationData || {
-            pickup: { address: "", coords: { lat: 0, lng: 0 } },
-            dropoff: { address: "", coords: { lat: 0, lng: 0 } },
-          },
-          [type]: location,
-        };
-        onLocationSelect(newLocationData);
-        form.setValue(type === "pickup" ? "pickupLocation" : "dropoffLocation", location.address);
-      } else {
+      setIsSearching(true);
+      try {
+        const location = await searchLocation(debouncedPickupSearch);
+        if (location) {
+          const newLocationData = {
+            ...locationData || {
+              pickup: { address: "", coords: { lat: 0, lng: 0 } },
+              dropoff: { address: "", coords: { lat: 0, lng: 0 } },
+            },
+            pickup: location,
+          };
+          onLocationSelect(newLocationData);
+          form.setValue("pickupLocation", location.address);
+        }
+      } catch (error) {
         toast({
-          title: "Location Not Found",
-          description: "Please try a different address",
+          title: "Search Failed",
+          description: "Failed to search pickup location. Please try again.",
           variant: "destructive",
         });
+      } finally {
+        setIsSearching(false);
       }
-    } catch (error) {
-      toast({
-        title: "Search Failed",
-        description: "Failed to search location. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSearching(false);
     }
-  };
+
+    performSearch();
+  }, [debouncedPickupSearch]);
+
+  useEffect(() => {
+    async function performSearch() {
+      if (!debouncedDropoffSearch) return;
+
+      setIsSearching(true);
+      try {
+        const location = await searchLocation(debouncedDropoffSearch);
+        if (location) {
+          const newLocationData = {
+            ...locationData || {
+              pickup: { address: "", coords: { lat: 0, lng: 0 } },
+              dropoff: { address: "", coords: { lat: 0, lng: 0 } },
+            },
+            dropoff: location,
+          };
+          onLocationSelect(newLocationData);
+          form.setValue("dropoffLocation", location.address);
+        }
+      } catch (error) {
+        toast({
+          title: "Search Failed",
+          description: "Failed to search dropoff location. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSearching(false);
+      }
+    }
+
+    performSearch();
+  }, [debouncedDropoffSearch]);
 
   const onSubmit = (data: any) => {
     if (!locationData?.pickup || !locationData?.dropoff) {
@@ -165,10 +215,10 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
                   <Input
                     {...field}
                     placeholder="Enter pickup address"
-                    value={locationData?.pickup.address || field.value}
+                    value={pickupSearch}
                     onChange={(e) => {
+                      setPickupSearch(e.target.value);
                       field.onChange(e);
-                      handleLocationSearch("pickup", e.target.value);
                     }}
                   />
                   {isSearching && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -190,10 +240,10 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
                   <Input
                     {...field}
                     placeholder="Enter dropoff address"
-                    value={locationData?.dropoff.address || field.value}
+                    value={dropoffSearch}
                     onChange={(e) => {
+                      setDropoffSearch(e.target.value);
                       field.onChange(e);
-                      handleLocationSearch("dropoff", e.target.value);
                     }}
                   />
                   {isSearching && <Loader2 className="h-4 w-4 animate-spin" />}
