@@ -55,6 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Registration successful",
+        description: `Your credentials:\nUsername: ${user.username}\nPlease save these for future logins.`,
+        duration: 10000, // Show for 10 seconds
+      });
     },
     onError: (error: Error) => {
       toast({
