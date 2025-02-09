@@ -10,13 +10,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   createBooking(booking: InsertBooking & { userId: number }): Promise<Booking>;
   getUserBookings(userId: number): Promise<Booking[]>;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private bookings: Map<number, Booking>;
-  public sessionStore: session.SessionStore;
+  public sessionStore: session.Store;
   private currentUserId: number;
   private currentBookingId: number;
 
@@ -49,7 +49,7 @@ export class MemStorage implements IStorage {
 
   async createBooking(booking: InsertBooking & { userId: number }): Promise<Booking> {
     const id = this.currentBookingId++;
-    const newBooking = { ...booking, id };
+    const newBooking = { ...booking, id, status: "pending" };
     this.bookings.set(id, newBooking);
     return newBooking;
   }

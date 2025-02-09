@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth } from "./auth.js";
 import { insertBookingSchema } from "@shared/schema";
 
 export function registerRoutes(app: Express): Server {
