@@ -26,7 +26,7 @@ export class MemStorage implements IStorage {
     this.currentUserId = 1;
     this.currentBookingId = 1;
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+      checkPeriod: 86400000, // Prune expired entries every 24h
     });
   }
 
@@ -36,7 +36,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username.toLowerCase() === username.toLowerCase(),
     );
   }
 
@@ -44,6 +44,7 @@ export class MemStorage implements IStorage {
     const id = this.currentUserId++;
     const user = { ...insertUser, id };
     this.users.set(id, user);
+    console.log(`Created user: ${user.username} with ID: ${user.id}`);
     return user;
   }
 
