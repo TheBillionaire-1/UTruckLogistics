@@ -18,15 +18,33 @@ import { LocationData } from "@/pages/booking-page";
 import VehicleSelect from "./vehicle-select";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
   onLocationSelect: (data: LocationData) => void;
   locationData: LocationData | null;
 };
 
+async function searchLocation(query: string) {
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      query
+    )}`
+  );
+  const data = await response.json();
+  return data[0] ? {
+    address: data[0].display_name,
+    coords: {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+    },
+  } : null;
+}
+
 export default function BookingForm({ onLocationSelect, locationData }: Props) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [isSearching, setIsSearching] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(insertBookingSchema),
@@ -61,11 +79,45 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
     },
   });
 
+  const handleLocationSearch = async (type: "pickup" | "dropoff", query: string) => {
+    if (!query) return;
+
+    setIsSearching(true);
+    try {
+      const location = await searchLocation(query);
+      if (location) {
+        const newLocationData = {
+          ...locationData || {
+            pickup: { address: "", coords: { lat: 0, lng: 0 } },
+            dropoff: { address: "", coords: { lat: 0, lng: 0 } },
+          },
+          [type]: location,
+        };
+        onLocationSelect(newLocationData);
+        form.setValue(type === "pickup" ? "pickupLocation" : "dropoffLocation", location.address);
+      } else {
+        toast({
+          title: "Location Not Found",
+          description: "Please try a different address",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Search Failed",
+        description: "Failed to search location. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const onSubmit = (data: any) => {
-    if (!locationData) {
+    if (!locationData?.pickup || !locationData?.dropoff) {
       toast({
         title: "Location Required",
-        description: "Please select pickup and dropoff locations",
+        description: "Please select both pickup and dropoff locations",
         variant: "destructive",
       });
       return;
@@ -109,15 +161,18 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
             <FormItem>
               <FormLabel>Pickup Location</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="Enter pickup address"
-                  value={locationData?.pickup.address || ""}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    // Here you would typically integrate with a geocoding service
-                  }}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    {...field}
+                    placeholder="Enter pickup address"
+                    value={locationData?.pickup.address || field.value}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleLocationSearch("pickup", e.target.value);
+                    }}
+                  />
+                  {isSearching && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -131,15 +186,18 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
             <FormItem>
               <FormLabel>Dropoff Location</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="Enter dropoff address"
-                  value={locationData?.dropoff.address || ""}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    // Here you would typically integrate with a geocoding service
-                  }}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    {...field}
+                    placeholder="Enter dropoff address"
+                    value={locationData?.dropoff.address || field.value}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleLocationSearch("dropoff", e.target.value);
+                    }}
+                  />
+                  {isSearching && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -149,7 +207,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
         <Button
           type="submit"
           className="w-full"
-          disabled={bookingMutation.isPending}
+          disabled={bookingMutation.isPending || isSearching}
         >
           {bookingMutation.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
