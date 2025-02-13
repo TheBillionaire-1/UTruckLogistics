@@ -88,7 +88,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
         description: "Your transport has been successfully booked.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      setLocation("/");
+      setLocation("/booking/details");  
     },
     onError: (error: Error) => {
       toast({
