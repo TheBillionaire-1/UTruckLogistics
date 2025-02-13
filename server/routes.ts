@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth.js";
-import { insertBookingSchema } from "@shared/schema";
+import { insertBookingSchema, updateBookingStatusSchema } from "@shared/schema";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -31,6 +31,35 @@ export function registerRoutes(app: Express): Server {
 
     const bookings = await storage.getUserBookings(req.user.id);
     res.json(bookings);
+  });
+
+  app.patch("/api/bookings/:id/status", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+
+    try {
+      const statusData = updateBookingStatusSchema.parse(req.body);
+      const bookingId = parseInt(req.params.id);
+
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ error: "Invalid booking ID" });
+      }
+
+      const updatedBooking = await storage.updateBookingStatus(
+        bookingId,
+        req.user.id,
+        statusData
+      );
+
+      if (!updatedBooking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      res.json(updatedBooking);
+    } catch (error) {
+      res.status(400).json({ error: "Invalid status update data" });
+    }
   });
 
   const httpServer = createServer(app);
