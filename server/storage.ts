@@ -1,9 +1,11 @@
 import { users, bookings, type User, type InsertUser, type Booking, type InsertBooking, type UpdateBookingStatus } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
-const MemoryStore = createMemoryStore(session);
-
+const PostgresStore = connectPg(session);
+const pool = db.$client; 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -14,57 +16,49 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private bookings: Map<number, Booking>;
+export class DatabaseStorage implements IStorage {
   public sessionStore: session.Store;
-  private currentUserId: number;
-  private currentBookingId: number;
 
   constructor() {
-    this.users = new Map();
-    this.bookings = new Map();
-    this.currentUserId = 1;
-    this.currentBookingId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // Prune expired entries every 24h
+    this.sessionStore = new PostgresStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username.toLowerCase() === username.toLowerCase(),
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     console.log(`Created user: ${user.username} with ID: ${user.id}`);
     return user;
   }
 
   async createBooking(booking: InsertBooking & { userId: number }): Promise<Booking> {
-    const id = this.currentBookingId++;
-    const newBooking = { 
-      ...booking, 
-      id, 
-      status: "pending",
-      updatedAt: new Date().toISOString(),
-    };
-    this.bookings.set(id, newBooking);
+    const [newBooking] = await db
+      .insert(bookings)
+      .values({
+        ...booking,
+        updatedAt: new Date().toISOString(),
+      })
+      .returning();
     return newBooking;
   }
 
   async getUserBookings(userId: number): Promise<Booking[]> {
-    return Array.from(this.bookings.values())
-      .filter((booking) => booking.userId === userId)
-      .sort((a, b) => b.id - a.id); // Sort by newest first
+    return db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.userId, userId))
+      .orderBy(bookings.id);
   }
 
   async updateBookingStatus(
@@ -72,21 +66,26 @@ export class MemStorage implements IStorage {
     userId: number,
     { status }: UpdateBookingStatus
   ): Promise<Booking | undefined> {
-    const booking = this.bookings.get(bookingId);
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
 
     if (!booking || booking.userId !== userId) {
       return undefined;
     }
 
-    const updatedBooking = {
-      ...booking,
-      status,
-      updatedAt: new Date().toISOString(),
-    };
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set({
+        status,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(bookings.id, bookingId))
+      .returning();
 
-    this.bookings.set(bookingId, updatedBooking);
     return updatedBooking;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
