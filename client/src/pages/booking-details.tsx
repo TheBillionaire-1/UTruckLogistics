@@ -36,36 +36,6 @@ export default function BookingDetailsPage() {
     },
   });
 
-  const getNextStatus = (currentStatus: string) => {
-    switch (currentStatus) {
-      case BookingStatus.PENDING:
-        return BookingStatus.ACCEPTED;
-      case BookingStatus.ACCEPTED:
-        return BookingStatus.IN_TRANSIT;
-      case BookingStatus.IN_TRANSIT:
-        return BookingStatus.COMPLETED;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case BookingStatus.PENDING:
-        return "text-yellow-600";
-      case BookingStatus.ACCEPTED:
-        return "text-blue-600";
-      case BookingStatus.IN_TRANSIT:
-        return "text-purple-600";
-      case BookingStatus.COMPLETED:
-        return "text-green-600";
-      case BookingStatus.CANCELLED:
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -74,7 +44,9 @@ export default function BookingDetailsPage() {
     );
   }
 
-  const latestBooking = bookings?.[0]; // First booking is the latest due to DESC order
+  // Get latest booking - the first one in the array due to DESC order
+  const latestBooking = bookings && bookings.length > 0 ? bookings[0] : null;
+  console.log('Latest booking:', latestBooking); // Add logging
 
   if (!latestBooking) {
     return (
@@ -144,24 +116,24 @@ export default function BookingDetailsPage() {
                   Mark as {nextStatus.replace('_', ' ')}
                 </Button>
               )}
-              {latestBooking.status !== BookingStatus.CANCELLED && 
-               latestBooking.status !== BookingStatus.COMPLETED && (
-                <Button
-                  variant="destructive"
-                  onClick={() =>
-                    statusMutation.mutate({
-                      bookingId: latestBooking.id,
-                      status: BookingStatus.CANCELLED,
-                    })
-                  }
-                  disabled={statusMutation.isPending}
-                >
-                  {statusMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Cancel Booking
-                </Button>
-              )}
+              {latestBooking.status !== BookingStatus.CANCELLED &&
+                latestBooking.status !== BookingStatus.COMPLETED && (
+                  <Button
+                    variant="destructive"
+                    onClick={() =>
+                      statusMutation.mutate({
+                        bookingId: latestBooking.id,
+                        status: BookingStatus.CANCELLED,
+                      })
+                    }
+                    disabled={statusMutation.isPending}
+                  >
+                    {statusMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Cancel Booking
+                  </Button>
+                )}
               {latestBooking.status === BookingStatus.IN_TRANSIT && (
                 <Button
                   variant="outline"
@@ -177,3 +149,33 @@ export default function BookingDetailsPage() {
     </div>
   );
 }
+
+const getNextStatus = (currentStatus: string) => {
+  switch (currentStatus) {
+    case BookingStatus.PENDING:
+      return BookingStatus.ACCEPTED;
+    case BookingStatus.ACCEPTED:
+      return BookingStatus.IN_TRANSIT;
+    case BookingStatus.IN_TRANSIT:
+      return BookingStatus.COMPLETED;
+    default:
+      return null;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case BookingStatus.PENDING:
+      return "text-yellow-600";
+    case BookingStatus.ACCEPTED:
+      return "text-blue-600";
+    case BookingStatus.IN_TRANSIT:
+      return "text-purple-600";
+    case BookingStatus.COMPLETED:
+      return "text-green-600";
+    case BookingStatus.CANCELLED:
+      return "text-red-600";
+    default:
+      return "text-gray-600";
+  }
+};

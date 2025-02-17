@@ -31,6 +31,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     const bookings = await storage.getUserBookings(req.user.id);
+    console.log('Retrieved bookings:', bookings); // Add logging
     res.json(bookings);
   });
 

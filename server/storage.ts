@@ -2,7 +2,7 @@ import { users, bookings, type User, type InsertUser, type Booking, type InsertB
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 const PostgresStore = connectPg(session);
 const pool = db.$client; 
@@ -58,7 +58,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bookings)
       .where(eq(bookings.userId, userId))
-      .orderBy(bookings.id, "desc"); // Changed to desc to get newest first
+      .orderBy((booking) => desc(booking.id));  // Use proper Drizzle ordering
   }
 
   async updateBookingStatus(
