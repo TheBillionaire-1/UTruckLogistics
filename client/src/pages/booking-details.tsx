@@ -15,31 +15,6 @@ export default function BookingDetailsPage() {
     queryKey: ["/api/bookings"],
   });
 
-  const latestBooking = bookings ? bookings[0] : null; // The first booking will be the latest due to DESC order
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!latestBooking) {
-    return (
-      <div className="min-h-screen bg-background">
-        <NavBar />
-        <div className="container mx-auto p-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No bookings found</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: string }) => {
       const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
@@ -90,6 +65,31 @@ export default function BookingDetailsPage() {
         return "text-gray-600";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  const latestBooking = bookings?.[0]; // First booking is the latest due to DESC order
+
+  if (!latestBooking) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <div className="container mx-auto p-6">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">No bookings found</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const nextStatus = getNextStatus(latestBooking.status);
 
@@ -144,7 +144,8 @@ export default function BookingDetailsPage() {
                   Mark as {nextStatus.replace('_', ' ')}
                 </Button>
               )}
-              {latestBooking.status !== BookingStatus.CANCELLED && latestBooking.status !== BookingStatus.COMPLETED && (
+              {latestBooking.status !== BookingStatus.CANCELLED && 
+               latestBooking.status !== BookingStatus.COMPLETED && (
                 <Button
                   variant="destructive"
                   onClick={() =>
