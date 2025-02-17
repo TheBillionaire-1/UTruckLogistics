@@ -6,9 +6,11 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function BookingDetailsPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
@@ -146,6 +148,14 @@ export default function BookingDetailsPage() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Cancel Booking
+                </Button>
+              )}
+              {latestBooking.status === BookingStatus.IN_TRANSIT && (
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/tracking")}
+                >
+                  Track Vehicle
                 </Button>
               )}
             </div>

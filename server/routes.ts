@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { setupAuth } from "./auth.js";
 import { insertBookingSchema, updateBookingStatusSchema } from "@shared/schema";
@@ -63,5 +64,30 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+
+  // Set up WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Simulate vehicle movement for demo purposes
+  wss.on('connection', (ws) => {
+    console.log('Client connected to tracking');
+
+    // Send simulated location updates every 2 seconds
+    const interval = setInterval(() => {
+      // Generate random movement within a small area
+      const location = {
+        lat: 40.7128 + (Math.random() - 0.5) * 0.01,
+        lng: -74.0060 + (Math.random() - 0.5) * 0.01
+      };
+
+      ws.send(JSON.stringify(location));
+    }, 2000);
+
+    ws.on('close', () => {
+      clearInterval(interval);
+      console.log('Client disconnected from tracking');
+    });
+  });
+
   return httpServer;
 }
