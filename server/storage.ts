@@ -58,7 +58,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bookings)
       .where(eq(bookings.userId, userId))
-      .orderBy(bookings.id);
+      .orderBy(bookings.id, "desc"); // Changed to desc to get newest first
   }
 
   async updateBookingStatus(
