@@ -134,12 +134,13 @@ export default function BookingDetailsPage() {
                     Cancel Booking
                   </Button>
                 )}
-              {latestBooking.status === BookingStatus.IN_TRANSIT && (
+              {(latestBooking.status === BookingStatus.ACCEPTED ||
+                latestBooking.status === BookingStatus.IN_TRANSIT) && (
                 <Button
                   variant="outline"
                   onClick={() => setLocation("/tracking")}
                 >
-                  Track Vehicle
+                  Track Your Service
                 </Button>
               )}
             </div>
