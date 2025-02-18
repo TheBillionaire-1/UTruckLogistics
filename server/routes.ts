@@ -20,9 +20,8 @@ export function registerRoutes(app: Express): Server {
         userId: req.user.id,
       });
       res.status(201).json(booking);
-    } catch (error: any) {
-      console.error('Booking creation error:', error);
-      res.status(400).json({ message: error.message || "Invalid booking data" });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid booking data" });
     }
   });
 
@@ -32,7 +31,7 @@ export function registerRoutes(app: Express): Server {
     }
 
     const bookings = await storage.getUserBookings(req.user.id);
-    console.log('Retrieved bookings:', bookings);
+    console.log('Retrieved bookings:', bookings); // Add logging
     res.json(bookings);
   });
 
@@ -46,7 +45,7 @@ export function registerRoutes(app: Express): Server {
       const bookingId = parseInt(req.params.id);
 
       if (isNaN(bookingId)) {
-        return res.status(400).json({ message: "Invalid booking ID" });
+        return res.status(400).json({ error: "Invalid booking ID" });
       }
 
       const updatedBooking = await storage.updateBookingStatus(
@@ -56,22 +55,27 @@ export function registerRoutes(app: Express): Server {
       );
 
       if (!updatedBooking) {
-        return res.status(404).json({ message: "Booking not found" });
+        return res.status(404).json({ error: "Booking not found" });
       }
 
       res.json(updatedBooking);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Invalid status update data" });
+    } catch (error) {
+      res.status(400).json({ error: "Invalid status update data" });
     }
   });
 
   const httpServer = createServer(app);
+
+  // Set up WebSocket server
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
+  // Simulate vehicle movement for demo purposes
   wss.on('connection', (ws) => {
     console.log('Client connected to tracking');
 
+    // Send simulated location updates every 2 seconds
     const interval = setInterval(() => {
+      // Generate random movement within a small area
       const location = {
         lat: 40.7128 + (Math.random() - 0.5) * 0.01,
         lng: -74.0060 + (Math.random() - 0.5) * 0.01
