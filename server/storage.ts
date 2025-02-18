@@ -1,4 +1,4 @@
-import { users, bookings, type User, type InsertUser, type Booking, type InsertBooking, type UpdateBookingStatus } from "@shared/schema";
+import { users, bookings, type User, type InsertUser, type Booking, type InsertBooking, type UpdateBookingStatus, BookingStatus } from "@shared/schema";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
@@ -48,9 +48,10 @@ export class DatabaseStorage implements IStorage {
       .insert(bookings)
       .values({
         ...booking,
+        status: BookingStatus.PENDING,
         updatedAt: now,
         createdAt: now,
-      })
+      } as any) 
       .returning();
     return newBooking;
   }
@@ -60,7 +61,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bookings)
       .where(eq(bookings.userId, userId))
-      .orderBy((booking) => desc(booking.id));  // Use proper Drizzle ordering
+      .orderBy((booking) => desc(booking.id));  
   }
 
   async updateBookingStatus(
