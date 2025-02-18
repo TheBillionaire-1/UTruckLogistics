@@ -80,6 +80,10 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/bookings", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Failed to create booking');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -88,7 +92,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
         description: "Your transport has been successfully booked.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      setLocation("/booking/details");  
+      setLocation("/booking/details");
     },
     onError: (error: Error) => {
       toast({
@@ -168,6 +172,15 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
       toast({
         title: "Location Required",
         description: "Please select both pickup and dropoff locations",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data.vehicleType) {
+      toast({
+        title: "Vehicle Required",
+        description: "Please select a vehicle type",
         variant: "destructive",
       });
       return;
