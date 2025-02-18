@@ -13,12 +13,18 @@ export const BookingStatus = {
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
+// Enhanced user table with profile information
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  fullName: text("full_name"),
+  email: text("email"),
+  phoneNumber: text("phone_number"),
+  profileImage: text("profile_image"),
 });
 
+// Enhanced bookings table with additional fields
 export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -27,22 +33,32 @@ export const bookings = pgTable("bookings", {
   dropoffLocation: text("dropoff_location").notNull(),
   pickupCoords: text("pickup_coords").notNull(),
   dropoffCoords: text("dropoff_coords").notNull(),
-  status: text("status", { enum: Object.values(BookingStatus) })
-    .notNull()
-    .default(BookingStatus.PENDING),
+  status: text("status").$type<BookingStatus>().notNull().default(BookingStatus.PENDING),
+  estimatedPrice: text("estimated_price"),
+  actualPrice: text("actual_price"),
+  distance: text("distance"),
+  duration: text("duration"),
+  notes: text("notes"),
   updatedAt: text("updated_at").notNull(),
+  createdAt: text("created_at").notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).extend({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email address"),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+  profileImage: z.string().optional(),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings)
-  .omit({ id: true, userId: true, updatedAt: true })
+  .omit({ id: true, userId: true, updatedAt: true, createdAt: true })
   .extend({
     pickupCoords: z.string(),
     dropoffCoords: z.string(),
+    estimatedPrice: z.string().optional(),
+    distance: z.string().optional(),
+    duration: z.string().optional(),
+    notes: z.string().optional(),
   });
 
 export const updateBookingStatusSchema = z.object({
