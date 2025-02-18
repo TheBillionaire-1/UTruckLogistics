@@ -80,11 +80,11 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/bookings", data);
+      const responseData = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to create booking');
+        throw new Error(responseData.message || 'Failed to create booking');
       }
-      return res.json();
+      return responseData;
     },
     onSuccess: () => {
       toast({
