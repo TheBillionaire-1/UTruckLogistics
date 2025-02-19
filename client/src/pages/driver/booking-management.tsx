@@ -42,11 +42,12 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first pending or accepted booking that isn't cancelled
+  // Get the first pending or accepted booking that isn't cancelled or in transit
   const currentBooking = bookings?.find(booking => 
     (booking.status === BookingStatus.PENDING || 
     (booking.status === BookingStatus.ACCEPTED && !bookings.some(b => b.status === BookingStatus.PENDING))) &&
-    booking.status !== BookingStatus.CANCELLED
+    booking.status !== BookingStatus.CANCELLED &&
+    booking.status !== BookingStatus.IN_TRANSIT
   );
 
   return (
@@ -69,10 +70,12 @@ export default function DriverBookingManagement() {
                     <p className="font-semibold">Pickup Location</p>
                     <p className="text-muted-foreground">{currentBooking.pickupLocation}</p>
                   </div>
-                  <div>
-                    <p className="font-semibold">Dropoff Location</p>
-                    <p className="text-muted-foreground">{currentBooking.dropoffLocation}</p>
-                  </div>
+                  {currentBooking.dropoffLocation && (
+                    <div>
+                      <p className="font-semibold">Dropoff Location</p>
+                      <p className="text-muted-foreground">{currentBooking.dropoffLocation}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="font-semibold">Status</p>
                     <p className={`font-medium capitalize ${getStatusColor(currentBooking.status)}`}>
