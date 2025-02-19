@@ -46,7 +46,6 @@ export default function BookingDetailsPage() {
 
   // Get latest booking - the first one in the array due to DESC order
   const latestBooking = bookings && bookings.length > 0 ? bookings[0] : null;
-  console.log('Latest booking:', latestBooking); // Add logging
 
   if (!latestBooking) {
     return (
@@ -62,8 +61,6 @@ export default function BookingDetailsPage() {
       </div>
     );
   }
-
-  const nextStatus = getNextStatus(latestBooking.status);
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,22 +97,6 @@ export default function BookingDetailsPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              {nextStatus && (
-                <Button
-                  onClick={() =>
-                    statusMutation.mutate({
-                      bookingId: latestBooking.id,
-                      status: nextStatus,
-                    })
-                  }
-                  disabled={statusMutation.isPending}
-                >
-                  {statusMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Mark as {nextStatus.replace('_', ' ')}
-                </Button>
-              )}
               {latestBooking.status !== BookingStatus.CANCELLED &&
                 latestBooking.status !== BookingStatus.COMPLETED && (
                   <Button
@@ -150,19 +131,6 @@ export default function BookingDetailsPage() {
     </div>
   );
 }
-
-const getNextStatus = (currentStatus: string) => {
-  switch (currentStatus) {
-    case BookingStatus.PENDING:
-      return BookingStatus.ACCEPTED;
-    case BookingStatus.ACCEPTED:
-      return BookingStatus.IN_TRANSIT;
-    case BookingStatus.IN_TRANSIT:
-      return BookingStatus.COMPLETED;
-    default:
-      return null;
-  }
-};
 
 const getStatusColor = (status: string) => {
   switch (status) {
