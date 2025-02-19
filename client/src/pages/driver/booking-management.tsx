@@ -42,15 +42,11 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Only show pending bookings
-  const pendingBooking = bookings?.find(booking => booking.status === BookingStatus.PENDING);
-
-  // If there's no pending booking, check for an accepted booking
-  const acceptedBooking = !pendingBooking 
-    ? bookings?.find(booking => booking.status === BookingStatus.ACCEPTED)
-    : null;
-
-  const currentBooking = pendingBooking || acceptedBooking;
+  // Get the first pending or accepted booking
+  const currentBooking = bookings?.find(booking => 
+    booking.status === BookingStatus.PENDING || 
+    (booking.status === BookingStatus.ACCEPTED && !bookings.some(b => b.status === BookingStatus.PENDING))
+  );
 
   return (
     <div className="min-h-screen bg-background">
