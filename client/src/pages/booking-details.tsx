@@ -79,12 +79,10 @@ export default function BookingDetailsPage() {
               <p className="font-semibold">Pickup Location</p>
               <p className="text-muted-foreground">{latestBooking.pickupLocation}</p>
             </div>
-            {latestBooking.dropoffLocation && (
-              <div>
-                <p className="font-semibold">Dropoff Location</p>
-                <p className="text-muted-foreground">{latestBooking.dropoffLocation}</p>
-              </div>
-            )}
+            <div>
+              <p className="font-semibold">Dropoff Location</p>
+              <p className="text-muted-foreground">{latestBooking.dropoffLocation}</p>
+            </div>
             <div>
               <p className="font-semibold">Status</p>
               <p className={`font-medium capitalize ${getStatusColor(latestBooking.status)}`}>
@@ -116,8 +114,7 @@ export default function BookingDetailsPage() {
                   Cancel Booking
                 </Button>
               )}
-              {(latestBooking.status === BookingStatus.ACCEPTED ||
-                latestBooking.status === BookingStatus.IN_TRANSIT) && (
+              {(latestBooking.status === BookingStatus.IN_TRANSIT) && (
                 <Button
                   variant="outline"
                   onClick={() => setLocation("/tracking")}
