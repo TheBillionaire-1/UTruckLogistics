@@ -6,9 +6,11 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
@@ -34,19 +36,6 @@ export default function DriverBookingManagement() {
     },
   });
 
-  const getNextStatus = (currentStatus: string) => {
-    switch (currentStatus) {
-      case BookingStatus.PENDING:
-        return BookingStatus.ACCEPTED;
-      case BookingStatus.ACCEPTED:
-        return BookingStatus.IN_TRANSIT;
-      case BookingStatus.IN_TRANSIT:
-        return BookingStatus.COMPLETED;
-      default:
-        return null;
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -55,17 +44,28 @@ export default function DriverBookingManagement() {
     );
   }
 
+  const pendingBookings = bookings?.filter(booking => 
+    booking.status === BookingStatus.PENDING || 
+    booking.status === BookingStatus.ACCEPTED
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
+      <NavBar currentPage="driver" />
       <div className="container mx-auto p-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Manage Bookings</CardTitle>
+            <Button 
+              variant="outline"
+              onClick={() => setLocation("/booking/details")}
+            >
+              Switch to Customer View
+            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
-            {bookings && bookings.length > 0 ? (
-              bookings.map((booking) => (
+            {pendingBookings && pendingBookings.length > 0 ? (
+              pendingBookings.map((booking) => (
                 <Card key={booking.id} className="p-4">
                   <div className="space-y-4">
                     <div>
@@ -86,20 +86,49 @@ export default function DriverBookingManagement() {
                         {booking.status.replace('_', ' ')}
                       </p>
                     </div>
-                    <div>
-                      <p className="font-semibold">Last Updated</p>
-                      <p className="text-muted-foreground">
-                        {new Date(booking.updatedAt).toLocaleString()}
-                      </p>
-                    </div>
 
                     <div className="flex gap-4 pt-4">
-                      {getNextStatus(booking.status) && (
+                      {booking.status === BookingStatus.PENDING && (
+                        <>
+                          <Button
+                            variant="default"
+                            onClick={() =>
+                              statusMutation.mutate({
+                                bookingId: booking.id,
+                                status: BookingStatus.ACCEPTED,
+                              })
+                            }
+                            disabled={statusMutation.isPending}
+                          >
+                            {statusMutation.isPending && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Accept Booking
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() =>
+                              statusMutation.mutate({
+                                bookingId: booking.id,
+                                status: BookingStatus.CANCELLED,
+                              })
+                            }
+                            disabled={statusMutation.isPending}
+                          >
+                            {statusMutation.isPending && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Reject Booking
+                          </Button>
+                        </>
+                      )}
+                      {booking.status === BookingStatus.ACCEPTED && (
                         <Button
+                          variant="default"
                           onClick={() =>
                             statusMutation.mutate({
                               bookingId: booking.id,
-                              status: getNextStatus(booking.status)!,
+                              status: BookingStatus.IN_TRANSIT,
                             })
                           }
                           disabled={statusMutation.isPending}
@@ -107,7 +136,7 @@ export default function DriverBookingManagement() {
                           {statusMutation.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Mark as {getNextStatus(booking.status)!.replace('_', ' ')}
+                          Start Transit
                         </Button>
                       )}
                     </div>
@@ -115,7 +144,7 @@ export default function DriverBookingManagement() {
                 </Card>
               ))
             ) : (
-              <p className="text-center text-muted-foreground">No bookings found</p>
+              <p className="text-center text-muted-foreground">No pending bookings found</p>
             )}
           </CardContent>
         </Card>

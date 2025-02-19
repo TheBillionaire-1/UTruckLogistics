@@ -64,7 +64,7 @@ export default function BookingDetailsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
+      <NavBar currentPage="customer" />
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>

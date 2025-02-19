@@ -1,10 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { Truck } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
-export default function NavBar() {
+type NavBarProps = {
+  currentPage?: "customer" | "driver";
+};
+
+export default function NavBar({ currentPage = "customer" }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
+  const [location] = useLocation();
+
+  const isDriverPage = currentPage === "driver" || location.startsWith("/driver");
+  const isDashboardVisible = location !== "/" && user;
 
   return (
     <nav className="border-b bg-background">
@@ -19,12 +27,18 @@ export default function NavBar() {
         <div className="flex items-center gap-4">
           {user && (
             <>
-              <Link href="/booking">
-                <Button variant="ghost">Book Transport</Button>
-              </Link>
-              <Link href="/driver/bookings">
-                <Button variant="ghost">Driver Dashboard</Button>
-              </Link>
+              {isDashboardVisible && (
+                <Link href={isDriverPage ? "/booking/details" : "/driver/bookings"}>
+                  <Button variant="ghost">
+                    {isDriverPage ? "Customer Dashboard" : "Driver Dashboard"}
+                  </Button>
+                </Link>
+              )}
+              {!isDriverPage && (
+                <Link href="/booking">
+                  <Button variant="ghost">Book Transport</Button>
+                </Link>
+              )}
               <Button
                 variant="outline"
                 onClick={() => logoutMutation.mutate()}
