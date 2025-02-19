@@ -5,7 +5,8 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 const PostgresStore = connectPg(session);
-const pool = db.$client; 
+const pool = db.$client;
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -43,7 +44,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBooking(booking: InsertBooking & { userId: number }): Promise<Booking> {
-    const now = new Date().toISOString();
+    const now = new Date();
     const [newBooking] = await db
       .insert(bookings)
       .values({
@@ -51,7 +52,7 @@ export class DatabaseStorage implements IStorage {
         status: BookingStatus.PENDING,
         updatedAt: now,
         createdAt: now,
-      } as any) 
+      })
       .returning();
     return newBooking;
   }
@@ -61,7 +62,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(bookings)
       .where(eq(bookings.userId, userId))
-      .orderBy((booking) => desc(booking.id));  
+      .orderBy(desc(bookings.id));
   }
 
   async updateBookingStatus(
@@ -82,7 +83,7 @@ export class DatabaseStorage implements IStorage {
       .update(bookings)
       .set({
         status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(),
       })
       .where(eq(bookings.id, bookingId))
       .returning();

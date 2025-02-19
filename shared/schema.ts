@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,8 +39,8 @@ export const bookings = pgTable("bookings", {
   distance: text("distance"),
   duration: text("duration"),
   notes: text("notes"),
-  updatedAt: text("updated_at").notNull(),
-  createdAt: text("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).extend({
