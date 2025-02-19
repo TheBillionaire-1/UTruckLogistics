@@ -97,25 +97,23 @@ export default function BookingDetailsPage() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              {latestBooking.status !== BookingStatus.CANCELLED &&
-                latestBooking.status !== BookingStatus.COMPLETED &&
-                latestBooking.status !== BookingStatus.IN_TRANSIT && (
-                  <Button
-                    variant="destructive"
-                    onClick={() =>
-                      statusMutation.mutate({
-                        bookingId: latestBooking.id,
-                        status: BookingStatus.CANCELLED,
-                      })
-                    }
-                    disabled={statusMutation.isPending}
-                  >
-                    {statusMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Cancel Booking
-                  </Button>
-                )}
+              {latestBooking.status === BookingStatus.PENDING && (
+                <Button
+                  variant="destructive"
+                  onClick={() =>
+                    statusMutation.mutate({
+                      bookingId: latestBooking.id,
+                      status: BookingStatus.CANCELLED,
+                    })
+                  }
+                  disabled={statusMutation.isPending}
+                >
+                  {statusMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Cancel Booking
+                </Button>
+              )}
               {(latestBooking.status === BookingStatus.ACCEPTED ||
                 latestBooking.status === BookingStatus.IN_TRANSIT) && (
                 <Button

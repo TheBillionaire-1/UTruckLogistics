@@ -42,10 +42,11 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first pending or accepted booking
+  // Get the first pending or accepted booking that isn't cancelled
   const currentBooking = bookings?.find(booking => 
-    booking.status === BookingStatus.PENDING || 
-    (booking.status === BookingStatus.ACCEPTED && !bookings.some(b => b.status === BookingStatus.PENDING))
+    (booking.status === BookingStatus.PENDING || 
+    (booking.status === BookingStatus.ACCEPTED && !bookings.some(b => b.status === BookingStatus.PENDING))) &&
+    booking.status !== BookingStatus.CANCELLED
   );
 
   return (
