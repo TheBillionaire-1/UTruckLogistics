@@ -9,6 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import BookingPage from "@/pages/booking-page";
 import BookingDetailsPage from "@/pages/booking-details";
 import TrackingPage from "@/pages/tracking-page";
+import DriverBookingManagement from "@/pages/driver/booking-management";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <ProtectedRoute path="/booking" component={BookingPage} />
       <ProtectedRoute path="/booking/details" component={BookingDetailsPage} />
       <ProtectedRoute path="/tracking" component={TrackingPage} />
+      <ProtectedRoute path="/driver/bookings" component={DriverBookingManagement} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
