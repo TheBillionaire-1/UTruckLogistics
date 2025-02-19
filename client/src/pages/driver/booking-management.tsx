@@ -6,11 +6,9 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
@@ -44,91 +42,56 @@ export default function DriverBookingManagement() {
     );
   }
 
-  const pendingBookings = bookings?.filter(booking => 
-    booking.status === BookingStatus.PENDING || 
-    booking.status === BookingStatus.ACCEPTED
-  );
+  // Only show pending bookings
+  const pendingBooking = bookings?.find(booking => booking.status === BookingStatus.PENDING);
+
+  // If there's no pending booking, check for an accepted booking
+  const acceptedBooking = !pendingBooking 
+    ? bookings?.find(booking => booking.status === BookingStatus.ACCEPTED)
+    : null;
+
+  const currentBooking = pendingBooking || acceptedBooking;
 
   return (
     <div className="min-h-screen bg-background">
       <NavBar currentPage="driver" />
       <div className="container mx-auto p-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Manage Bookings</CardTitle>
-            <Button 
-              variant="outline"
-              onClick={() => setLocation("/booking/details")}
-            >
-              Switch to Customer View
-            </Button>
           </CardHeader>
           <CardContent className="space-y-6">
-            {pendingBookings && pendingBookings.length > 0 ? (
-              pendingBookings.map((booking) => (
-                <Card key={booking.id} className="p-4">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="font-semibold">Vehicle Type</p>
-                      <p className="text-muted-foreground">{booking.vehicleType}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold">Pickup Location</p>
-                      <p className="text-muted-foreground">{booking.pickupLocation}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold">Dropoff Location</p>
-                      <p className="text-muted-foreground">{booking.dropoffLocation}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold">Status</p>
-                      <p className={`font-medium capitalize ${getStatusColor(booking.status)}`}>
-                        {booking.status.replace('_', ' ')}
-                      </p>
-                    </div>
+            {currentBooking ? (
+              <Card className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-semibold">Vehicle Type</p>
+                    <p className="text-muted-foreground">{currentBooking.vehicleType}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Pickup Location</p>
+                    <p className="text-muted-foreground">{currentBooking.pickupLocation}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Dropoff Location</p>
+                    <p className="text-muted-foreground">{currentBooking.dropoffLocation}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Status</p>
+                    <p className={`font-medium capitalize ${getStatusColor(currentBooking.status)}`}>
+                      {currentBooking.status.replace('_', ' ')}
+                    </p>
+                  </div>
 
-                    <div className="flex gap-4 pt-4">
-                      {booking.status === BookingStatus.PENDING && (
-                        <>
-                          <Button
-                            variant="default"
-                            onClick={() =>
-                              statusMutation.mutate({
-                                bookingId: booking.id,
-                                status: BookingStatus.ACCEPTED,
-                              })
-                            }
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Accept Booking
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() =>
-                              statusMutation.mutate({
-                                bookingId: booking.id,
-                                status: BookingStatus.CANCELLED,
-                              })
-                            }
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Reject Booking
-                          </Button>
-                        </>
-                      )}
-                      {booking.status === BookingStatus.ACCEPTED && (
+                  <div className="flex gap-4 pt-4">
+                    {currentBooking.status === BookingStatus.PENDING && (
+                      <>
                         <Button
                           variant="default"
                           onClick={() =>
                             statusMutation.mutate({
-                              bookingId: booking.id,
-                              status: BookingStatus.IN_TRANSIT,
+                              bookingId: currentBooking.id,
+                              status: BookingStatus.ACCEPTED,
                             })
                           }
                           disabled={statusMutation.isPending}
@@ -136,13 +99,45 @@ export default function DriverBookingManagement() {
                           {statusMutation.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Start Transit
+                          Accept Booking
                         </Button>
-                      )}
-                    </div>
+                        <Button
+                          variant="destructive"
+                          onClick={() =>
+                            statusMutation.mutate({
+                              bookingId: currentBooking.id,
+                              status: BookingStatus.CANCELLED,
+                            })
+                          }
+                          disabled={statusMutation.isPending}
+                        >
+                          {statusMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Reject Booking
+                        </Button>
+                      </>
+                    )}
+                    {currentBooking.status === BookingStatus.ACCEPTED && (
+                      <Button
+                        variant="default"
+                        onClick={() =>
+                          statusMutation.mutate({
+                            bookingId: currentBooking.id,
+                            status: BookingStatus.IN_TRANSIT,
+                          })
+                        }
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Start Transit
+                      </Button>
+                    )}
                   </div>
-                </Card>
-              ))
+                </div>
+              </Card>
             ) : (
               <p className="text-center text-muted-foreground">No pending bookings found</p>
             )}
