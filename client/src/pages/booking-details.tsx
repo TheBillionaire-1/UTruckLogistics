@@ -77,11 +77,15 @@ export default function BookingDetailsPage() {
             </div>
             <div>
               <p className="font-semibold">Pickup Location</p>
-              <p className="text-muted-foreground">{latestBooking.pickupLocation}</p>
+              <p className="text-muted-foreground">
+                {latestBooking.pickupLocation || "Not specified"}
+              </p>
             </div>
             <div>
               <p className="font-semibold">Dropoff Location</p>
-              <p className="text-muted-foreground">{latestBooking.dropoffLocation}</p>
+              <p className="text-muted-foreground">
+                {latestBooking.dropoffLocation || "Not specified"}
+              </p>
             </div>
             <div>
               <p className="font-semibold">Status</p>

@@ -68,11 +68,15 @@ export default function DriverBookingManagement() {
                   </div>
                   <div>
                     <p className="font-semibold">Pickup Location</p>
-                    <p className="text-muted-foreground">{currentBooking.pickupLocation}</p>
+                    <p className="text-muted-foreground">
+                      {currentBooking.pickupLocation || "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <p className="font-semibold">Dropoff Location</p>
-                    <p className="text-muted-foreground">{currentBooking.dropoffLocation}</p>
+                    <p className="text-muted-foreground">
+                      {currentBooking.dropoffLocation || "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <p className="font-semibold">Status</p>
