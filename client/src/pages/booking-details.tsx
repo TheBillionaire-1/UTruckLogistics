@@ -98,7 +98,8 @@ export default function BookingDetailsPage() {
 
             <div className="flex gap-4 pt-4">
               {latestBooking.status !== BookingStatus.CANCELLED &&
-                latestBooking.status !== BookingStatus.COMPLETED && (
+                latestBooking.status !== BookingStatus.COMPLETED &&
+                latestBooking.status !== BookingStatus.IN_TRANSIT && (
                   <Button
                     variant="destructive"
                     onClick={() =>

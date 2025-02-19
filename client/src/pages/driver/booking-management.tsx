@@ -114,7 +114,7 @@ export default function DriverBookingManagement() {
                         </Button>
                       </>
                     )}
-                    {currentBooking.status === BookingStatus.ACCEPTED && (
+                    {currentBooking.status === BookingStatus.ACCEPTED && !statusMutation.isPending && (
                       <Button
                         variant="default"
                         onClick={() =>
