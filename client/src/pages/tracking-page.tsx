@@ -43,12 +43,12 @@ export default function TrackingPage() {
       <Button
         variant="outline"
         size="icon"
-        className="absolute top-4 right-4 z-50"
+        className="fixed top-4 right-4 z-[9999] bg-white shadow-md hover:bg-gray-100"
         onClick={() => setLocation("/booking/details")}
       >
         <X className="h-4 w-4" />
       </Button>
-      
+
       <Card className="w-full h-full">
         <MapContainer
           center={[vehicleLocation.lat || 0, vehicleLocation.lng || 0]}
