@@ -22,6 +22,9 @@ export default function NavBar() {
               <Link href="/booking">
                 <Button variant="ghost">Book Transport</Button>
               </Link>
+              <Link href="/driver/bookings">
+                <Button variant="ghost">Driver Dashboard</Button>
+              </Link>
               <Button
                 variant="outline"
                 onClick={() => logoutMutation.mutate()}
