@@ -42,12 +42,11 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first pending or accepted booking that isn't cancelled or in transit
+  // Get the first pending or accepted booking that isn't cancelled 
   const currentBooking = bookings?.find(booking => 
     (booking.status === BookingStatus.PENDING || 
     booking.status === BookingStatus.ACCEPTED) &&
-    booking.status !== BookingStatus.CANCELLED &&
-    booking.status !== BookingStatus.IN_TRANSIT
+    booking.status !== BookingStatus.CANCELLED
   );
 
   return (
