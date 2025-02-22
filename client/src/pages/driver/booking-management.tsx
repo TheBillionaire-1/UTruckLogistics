@@ -157,6 +157,21 @@ export default function DriverBookingManagement() {
                   </div>
                 )}
 
+                {currentBooking.status === BookingStatus.IN_TRANSIT && (
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      variant="default"
+                      onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
+                      disabled={statusMutation.isPending}
+                    >
+                      {statusMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Mark as Delivered
+                    </Button>
+                  </div>
+                )}
+
               </div>
             ) : (
               <p className="text-center text-muted-foreground">No bookings found</p>
