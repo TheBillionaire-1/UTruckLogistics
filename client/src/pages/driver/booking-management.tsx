@@ -116,7 +116,7 @@ export default function DriverBookingManagement() {
                   </p>
                 </div>
 
-                {/* Show action buttons only if the booking is in PENDING status */}
+                {/* Show action buttons based on current status */}
                 {currentBooking.status === BookingStatus.PENDING && (
                   <div className="flex gap-4 pt-4">
                     <Button
@@ -141,6 +141,22 @@ export default function DriverBookingManagement() {
                     </Button>
                   </div>
                 )}
+
+                {currentBooking.status === BookingStatus.ACCEPTED && (
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      variant="default"
+                      onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
+                      disabled={statusMutation.isPending}
+                    >
+                      {statusMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Start Transit
+                    </Button>
+                  </div>
+                )}
+
               </div>
             ) : (
               <p className="text-center text-muted-foreground">No bookings found</p>
