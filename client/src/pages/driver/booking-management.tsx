@@ -42,10 +42,22 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Only show bookings that are active (not completed or cancelled)
-  const currentBooking = bookings?.find(booking => 
+  // Only show active bookings (exclude completed and cancelled)
+  const activeBookings = bookings?.filter(booking => 
     [BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_TRANSIT].includes(booking.status as BookingStatus)
   );
+
+  const currentBooking = activeBookings && activeBookings.length > 0 ? activeBookings[0] : null;
+
+  const handleStatusUpdate = async (bookingId: number, status: BookingStatus) => {
+    try {
+      await statusMutation.mutateAsync({ bookingId, status });
+      // Force immediate UI update after status change
+      await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+    } catch (error) {
+      console.error('Status update failed:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,12 +99,7 @@ export default function DriverBookingManagement() {
                       <div className="flex gap-4">
                         <Button
                           variant="default"
-                          onClick={() =>
-                            statusMutation.mutate({
-                              bookingId: currentBooking.id,
-                              status: BookingStatus.ACCEPTED,
-                            })
-                          }
+                          onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.ACCEPTED)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
@@ -102,14 +109,7 @@ export default function DriverBookingManagement() {
                         </Button>
                         <Button
                           variant="destructive"
-                          onClick={async () => {
-                            await statusMutation.mutateAsync({
-                              bookingId: currentBooking.id,
-                              status: BookingStatus.CANCELLED,
-                            });
-                            // Force immediate UI update
-                            await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-                          }}
+                          onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.CANCELLED)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
@@ -122,12 +122,7 @@ export default function DriverBookingManagement() {
                     {currentBooking.status === BookingStatus.ACCEPTED && (
                       <Button
                         variant="default"
-                        onClick={() =>
-                          statusMutation.mutate({
-                            bookingId: currentBooking.id,
-                            status: BookingStatus.IN_TRANSIT,
-                          })
-                        }
+                        onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.IN_TRANSIT)}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -139,14 +134,7 @@ export default function DriverBookingManagement() {
                     {currentBooking.status === BookingStatus.IN_TRANSIT && (
                       <Button
                         variant="default"
-                        onClick={async () => {
-                          await statusMutation.mutateAsync({
-                            bookingId: currentBooking.id,
-                            status: BookingStatus.COMPLETED,
-                          });
-                          // Force immediate UI update
-                          await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-                        }}
+                        onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.COMPLETED)}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
