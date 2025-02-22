@@ -42,12 +42,9 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first active booking (not cancelled or completed)
+  // Get the first pending, accepted, or in_transit booking
   const currentBooking = bookings?.find(booking => 
-    (booking.status === BookingStatus.PENDING || 
-    booking.status === BookingStatus.ACCEPTED || 
-    booking.status === BookingStatus.IN_TRANSIT) &&
-    booking.status !== BookingStatus.CANCELLED
+    [BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_TRANSIT].includes(booking.status as BookingStatus)
   );
 
   const handleStatusUpdate = async (status: BookingStatus) => {
@@ -101,56 +98,59 @@ export default function DriverBookingManagement() {
                     </p>
                   </div>
 
-                  {currentBooking.status !== BookingStatus.CANCELLED && (
+                  {/* Only show action buttons if status is not CANCELLED */}
+                  {currentBooking.status === BookingStatus.PENDING && (
                     <div className="flex gap-4 pt-4">
-                      {currentBooking.status === BookingStatus.PENDING && (
-                        <div className="flex gap-4">
-                          <Button
-                            variant="default"
-                            onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Accept Booking
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Reject Booking
-                          </Button>
-                        </div>
-                      )}
-                      {currentBooking.status === BookingStatus.ACCEPTED && (
-                        <Button
-                          variant="default"
-                          onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
-                          disabled={statusMutation.isPending}
-                        >
-                          {statusMutation.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          Start Transit
-                        </Button>
-                      )}
-                      {currentBooking.status === BookingStatus.IN_TRANSIT && (
-                        <Button
-                          variant="default"
-                          onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
-                          disabled={statusMutation.isPending}
-                        >
-                          {statusMutation.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          Mark as Delivered
-                        </Button>
-                      )}
+                      <Button
+                        variant="default"
+                        onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Accept Booking
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Reject Booking
+                      </Button>
+                    </div>
+                  )}
+
+                  {currentBooking.status === BookingStatus.ACCEPTED && (
+                    <div className="flex gap-4 pt-4">
+                      <Button
+                        variant="default"
+                        onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Start Transit
+                      </Button>
+                    </div>
+                  )}
+
+                  {currentBooking.status === BookingStatus.IN_TRANSIT && (
+                    <div className="flex gap-4 pt-4">
+                      <Button
+                        variant="default"
+                        onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Mark as Delivered
+                      </Button>
                     </div>
                   )}
                 </div>
