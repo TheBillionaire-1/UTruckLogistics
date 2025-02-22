@@ -13,7 +13,6 @@ export default function DriverBookingManagement() {
     queryKey: ["/api/bookings"],
   });
 
-  // Mutation with proper typing and logging
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
       console.log('Starting mutation with status:', status);
@@ -24,13 +23,10 @@ export default function DriverBookingManagement() {
     },
     onMutate: async (variables) => {
       console.log('Optimistic update starting with:', variables);
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/bookings"] });
 
-      // Get current bookings
       const previousBookings = queryClient.getQueryData<Booking[]>(["/api/bookings"]);
 
-      // Optimistically update the booking status
       if (previousBookings) {
         const updatedBookings = previousBookings.map(booking =>
           booking.id === variables.bookingId
@@ -42,9 +38,12 @@ export default function DriverBookingManagement() {
 
       return { previousBookings };
     },
+    onSuccess: (data) => {
+      console.log('Mutation successful:', data);
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+    },
     onError: (error: Error, variables, context) => {
       console.error('Mutation error:', error);
-      // Revert optimistic update on error
       if (context?.previousBookings) {
         queryClient.setQueryData(["/api/bookings"], context.previousBookings);
       }
@@ -64,8 +63,10 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first pending booking
-  const currentBooking = bookings?.find(booking => booking.status === BookingStatus.PENDING);
+  // Get the most recent booking that hasn't been completed
+  const currentBooking = bookings?.find(booking => 
+    booking.status !== BookingStatus.COMPLETED
+  );
 
   const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
@@ -115,7 +116,7 @@ export default function DriverBookingManagement() {
                   </p>
                 </div>
 
-                {/* Only show buttons for PENDING status */}
+                {/* Show action buttons only if the booking is in PENDING status */}
                 {currentBooking.status === BookingStatus.PENDING && (
                   <div className="flex gap-4 pt-4">
                     <Button
@@ -142,7 +143,7 @@ export default function DriverBookingManagement() {
                 )}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No pending bookings found</p>
+              <p className="text-center text-muted-foreground">No bookings found</p>
             )}
           </CardContent>
         </Card>
