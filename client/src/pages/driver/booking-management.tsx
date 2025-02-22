@@ -42,10 +42,9 @@ export default function DriverBookingManagement() {
     );
   }
 
+  // Only show bookings that are not completed or cancelled
   const currentBooking = bookings?.find(booking => 
-    booking.status === BookingStatus.PENDING || 
-    booking.status === BookingStatus.ACCEPTED ||
-    booking.status === BookingStatus.IN_TRANSIT
+    [BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_TRANSIT].includes(booking.status as BookingStatus)
   );
 
   return (
@@ -138,12 +137,15 @@ export default function DriverBookingManagement() {
                     {currentBooking.status === BookingStatus.IN_TRANSIT && (
                       <Button
                         variant="default"
-                        onClick={() =>
-                          statusMutation.mutate({
+                        onClick={async () => {
+                          // Use mutateAsync to ensure completion before refetching
+                          await statusMutation.mutateAsync({
                             bookingId: currentBooking.id,
                             status: BookingStatus.COMPLETED,
-                          })
-                        }
+                          });
+                          // Force immediate UI update
+                          await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+                        }}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
