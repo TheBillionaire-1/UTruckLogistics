@@ -42,21 +42,20 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Only show active bookings (exclude completed and cancelled)
-  const activeBookings = bookings?.filter(booking => 
-    [BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_TRANSIT].includes(booking.status as BookingStatus)
+  // Get the first active booking (not cancelled or completed)
+  const currentBooking = bookings?.find(booking => 
+    booking.status === BookingStatus.PENDING || 
+    booking.status === BookingStatus.ACCEPTED || 
+    booking.status === BookingStatus.IN_TRANSIT
   );
 
-  const currentBooking = activeBookings && activeBookings.length > 0 ? activeBookings[0] : null;
+  const handleStatusUpdate = (status: BookingStatus) => {
+    if (!currentBooking) return;
 
-  const handleStatusUpdate = async (bookingId: number, status: BookingStatus) => {
-    try {
-      await statusMutation.mutateAsync({ bookingId, status });
-      // Force immediate UI update after status change
-      await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-    } catch (error) {
-      console.error('Status update failed:', error);
-    }
+    statusMutation.mutate({
+      bookingId: currentBooking.id,
+      status: status
+    });
   };
 
   return (
@@ -99,7 +98,7 @@ export default function DriverBookingManagement() {
                       <div className="flex gap-4">
                         <Button
                           variant="default"
-                          onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.ACCEPTED)}
+                          onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
@@ -109,7 +108,7 @@ export default function DriverBookingManagement() {
                         </Button>
                         <Button
                           variant="destructive"
-                          onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.CANCELLED)}
+                          onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
@@ -122,7 +121,7 @@ export default function DriverBookingManagement() {
                     {currentBooking.status === BookingStatus.ACCEPTED && (
                       <Button
                         variant="default"
-                        onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.IN_TRANSIT)}
+                        onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -134,7 +133,7 @@ export default function DriverBookingManagement() {
                     {currentBooking.status === BookingStatus.IN_TRANSIT && (
                       <Button
                         variant="default"
-                        onClick={() => handleStatusUpdate(currentBooking.id, BookingStatus.COMPLETED)}
+                        onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
