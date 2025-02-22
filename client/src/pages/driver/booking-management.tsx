@@ -42,12 +42,11 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the first active booking (pending, accepted, in_transit, or cancelled)
+  // Get the first active booking (pending, accepted, in_transit)
   const currentBooking = bookings?.find(booking => 
     booking.status === BookingStatus.PENDING || 
     booking.status === BookingStatus.ACCEPTED ||
-    booking.status === BookingStatus.IN_TRANSIT ||
-    booking.status === BookingStatus.CANCELLED
+    booking.status === BookingStatus.IN_TRANSIT
   );
 
   return (
@@ -135,6 +134,23 @@ export default function DriverBookingManagement() {
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         )}
                         Start Transit
+                      </Button>
+                    )}
+                    {currentBooking.status === BookingStatus.IN_TRANSIT && (
+                      <Button
+                        variant="default"
+                        onClick={() =>
+                          statusMutation.mutate({
+                            bookingId: currentBooking.id,
+                            status: BookingStatus.COMPLETED,
+                          })
+                        }
+                        disabled={statusMutation.isPending}
+                      >
+                        {statusMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Mark as Delivered
                       </Button>
                     )}
                   </div>
