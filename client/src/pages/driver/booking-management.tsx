@@ -13,22 +13,49 @@ export default function DriverBookingManagement() {
     queryKey: ["/api/bookings"],
   });
 
+  // Mutation with proper typing and logging
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
-      console.log('Updating status to:', status); // Debug log
+      console.log('Starting mutation with status:', status);
       const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
-      return res.json();
+      const data = await res.json();
+      console.log('Mutation response:', data);
+      return data;
     },
-    onSuccess: () => {
-      // Invalidate and refetch immediately
+    onMutate: async (variables) => {
+      console.log('Optimistic update starting with:', variables);
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/bookings"] });
+
+      // Get current bookings
+      const previousBookings = queryClient.getQueryData<Booking[]>(["/api/bookings"]);
+
+      // Optimistically update the booking status
+      if (previousBookings) {
+        const updatedBookings = previousBookings.map(booking =>
+          booking.id === variables.bookingId
+            ? { ...booking, status: variables.status }
+            : booking
+        );
+        queryClient.setQueryData(["/api/bookings"], updatedBookings);
+      }
+
+      return { previousBookings };
+    },
+    onSuccess: (data, variables) => {
+      console.log('Mutation successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
         title: "Status Updated",
-        description: "The booking status has been updated successfully.",
+        description: `Booking status updated to ${variables.status}`,
       });
     },
-    onError: (error: Error) => {
-      console.error('Status update error:', error); // Debug log
+    onError: (error: Error, variables, context) => {
+      console.error('Mutation error:', error);
+      // Revert optimistic update on error
+      if (context?.previousBookings) {
+        queryClient.setQueryData(["/api/bookings"], context.previousBookings);
+      }
       toast({
         title: "Update Failed",
         description: error.message,
@@ -45,18 +72,13 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get active booking (not completed or cancelled)
-  const currentBooking = bookings?.find(booking => {
-    console.log('Checking booking status:', booking.status); // Debug log
-    return booking.status === BookingStatus.PENDING ||
-           booking.status === BookingStatus.ACCEPTED ||
-           booking.status === BookingStatus.IN_TRANSIT;
-  });
+  // Get the first pending booking
+  const currentBooking = bookings?.find(booking => booking.status === BookingStatus.PENDING);
 
   const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
 
-    console.log('Handling status update to:', status); // Debug log
+    console.log('handleStatusUpdate called with:', status);
     try {
       await statusMutation.mutateAsync({
         bookingId: currentBooking.id,
@@ -67,6 +89,7 @@ export default function DriverBookingManagement() {
     }
   };
 
+  // For now, only show the Accept/Reject buttons for PENDING status
   return (
     <div className="min-h-screen bg-background">
       <NavBar currentPage="driver" />
@@ -79,93 +102,40 @@ export default function DriverBookingManagement() {
             {currentBooking ? (
               <div className="space-y-4">
                 <div>
-                  <p className="font-semibold">Vehicle Type</p>
-                  <p className="text-muted-foreground">{currentBooking.vehicleType}</p>
-                </div>
-                <div>
-                  <p className="font-semibold">Pickup Location</p>
-                  <p className="text-muted-foreground">
-                    {currentBooking.pickupLocation || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold">Dropoff Location</p>
-                  <p className="text-muted-foreground">
-                    {currentBooking.dropoffLocation || "Not specified"}
-                  </p>
-                </div>
-                <div>
                   <p className="font-semibold">Status</p>
                   <p className={`font-medium capitalize ${getStatusColor(currentBooking.status)}`}>
                     {currentBooking.status.replace('_', ' ')}
                   </p>
                 </div>
 
-                {/* Status-specific action buttons */}
-                {(() => {
-                  switch (currentBooking.status) {
-                    case BookingStatus.PENDING:
-                      return (
-                        <div className="flex gap-4 pt-4">
-                          <Button
-                            variant="default"
-                            onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Accept Booking
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Reject Booking
-                          </Button>
-                        </div>
-                      );
-                    case BookingStatus.ACCEPTED:
-                      return (
-                        <div className="flex gap-4 pt-4">
-                          <Button
-                            variant="default"
-                            onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Start Transit
-                          </Button>
-                        </div>
-                      );
-                    case BookingStatus.IN_TRANSIT:
-                      return (
-                        <div className="flex gap-4 pt-4">
-                          <Button
-                            variant="default"
-                            onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
-                            disabled={statusMutation.isPending}
-                          >
-                            {statusMutation.isPending && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Mark as Delivered
-                          </Button>
-                        </div>
-                      );
-                    default:
-                      return null;
-                  }
-                })()}
+                {/* Only show buttons for PENDING status */}
+                {currentBooking.status === BookingStatus.PENDING && (
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      variant="default"
+                      onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
+                      disabled={statusMutation.isPending}
+                    >
+                      {statusMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Accept Booking
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
+                      disabled={statusMutation.isPending}
+                    >
+                      {statusMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Reject Booking
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No active bookings found</p>
+              <p className="text-center text-muted-foreground">No pending bookings found</p>
             )}
           </CardContent>
         </Card>
