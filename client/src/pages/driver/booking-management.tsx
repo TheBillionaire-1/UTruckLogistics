@@ -38,9 +38,13 @@ export default function DriverBookingManagement() {
 
       return { previousBookings };
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       console.log('Mutation successful:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Status Updated",
+        description: `Booking status updated to ${variables.status.toLowerCase().replace('_', ' ')}`,
+      });
     },
     onError: (error: Error, variables, context) => {
       console.error('Mutation error:', error);
