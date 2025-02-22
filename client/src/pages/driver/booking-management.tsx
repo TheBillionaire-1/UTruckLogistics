@@ -67,12 +67,18 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the most recent active booking (not completed or cancelled)
-  const currentBooking = bookings?.find(booking => 
-    booking.status === BookingStatus.PENDING ||
-    booking.status === BookingStatus.ACCEPTED ||
-    booking.status === BookingStatus.IN_TRANSIT
-  );
+  // Get the current active booking (not completed or cancelled)
+  const currentBooking = bookings?.find(booking => {
+    if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
+      return false;
+    }
+    // For IN_TRANSIT bookings, show them until they're marked as completed
+    if (booking.status === BookingStatus.IN_TRANSIT) {
+      return true;
+    }
+    // For other statuses (PENDING, ACCEPTED), show if they're the most recent
+    return booking.status === BookingStatus.PENDING || booking.status === BookingStatus.ACCEPTED;
+  });
 
   const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
@@ -177,7 +183,6 @@ export default function DriverBookingManagement() {
                     </Button>
                   </div>
                 )}
-
               </div>
             ) : (
               <p className="text-center text-muted-foreground">No bookings found</p>
