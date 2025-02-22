@@ -44,18 +44,26 @@ export default function DriverBookingManagement() {
 
   // Get the first active booking (not cancelled or completed)
   const currentBooking = bookings?.find(booking => 
-    booking.status === BookingStatus.PENDING || 
+    (booking.status === BookingStatus.PENDING || 
     booking.status === BookingStatus.ACCEPTED || 
-    booking.status === BookingStatus.IN_TRANSIT
+    booking.status === BookingStatus.IN_TRANSIT) &&
+    booking.status !== BookingStatus.CANCELLED
   );
 
-  const handleStatusUpdate = (status: BookingStatus) => {
+  const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
 
-    statusMutation.mutate({
-      bookingId: currentBooking.id,
-      status: status
-    });
+    try {
+      await statusMutation.mutateAsync({
+        bookingId: currentBooking.id,
+        status: status
+      });
+
+      // Force immediate UI update
+      await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+    } catch (error) {
+      console.error('Status update failed:', error);
+    }
   };
 
   return (
@@ -93,56 +101,58 @@ export default function DriverBookingManagement() {
                     </p>
                   </div>
 
-                  <div className="flex gap-4 pt-4">
-                    {currentBooking.status === BookingStatus.PENDING && (
-                      <div className="flex gap-4">
+                  {currentBooking.status !== BookingStatus.CANCELLED && (
+                    <div className="flex gap-4 pt-4">
+                      {currentBooking.status === BookingStatus.PENDING && (
+                        <div className="flex gap-4">
+                          <Button
+                            variant="default"
+                            onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
+                            disabled={statusMutation.isPending}
+                          >
+                            {statusMutation.isPending && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Accept Booking
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
+                            disabled={statusMutation.isPending}
+                          >
+                            {statusMutation.isPending && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Reject Booking
+                          </Button>
+                        </div>
+                      )}
+                      {currentBooking.status === BookingStatus.ACCEPTED && (
                         <Button
                           variant="default"
-                          onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
+                          onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Accept Booking
+                          Start Transit
                         </Button>
+                      )}
+                      {currentBooking.status === BookingStatus.IN_TRANSIT && (
                         <Button
-                          variant="destructive"
-                          onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
+                          variant="default"
+                          onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Reject Booking
+                          Mark as Delivered
                         </Button>
-                      </div>
-                    )}
-                    {currentBooking.status === BookingStatus.ACCEPTED && (
-                      <Button
-                        variant="default"
-                        onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
-                        disabled={statusMutation.isPending}
-                      >
-                        {statusMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Start Transit
-                      </Button>
-                    )}
-                    {currentBooking.status === BookingStatus.IN_TRANSIT && (
-                      <Button
-                        variant="default"
-                        onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
-                        disabled={statusMutation.isPending}
-                      >
-                        {statusMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Mark as Delivered
-                      </Button>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             ) : (
