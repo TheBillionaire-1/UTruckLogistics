@@ -67,9 +67,11 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the most recent booking that hasn't been completed
+  // Get the most recent active booking (not completed or cancelled)
   const currentBooking = bookings?.find(booking => 
-    booking.status !== BookingStatus.COMPLETED && booking.status !== BookingStatus.CANCELLED
+    booking.status === BookingStatus.PENDING ||
+    booking.status === BookingStatus.ACCEPTED ||
+    booking.status === BookingStatus.IN_TRANSIT
   );
 
   const handleStatusUpdate = async (status: BookingStatus) => {
