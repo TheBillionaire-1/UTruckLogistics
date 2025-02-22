@@ -69,14 +69,16 @@ export default function DriverBookingManagement() {
 
   // Get the current active booking (not completed or cancelled)
   const currentBooking = bookings?.find(booking => {
+    // First, check if there's an in-transit booking
+    const inTransitBooking = bookings.find(b => b.status === BookingStatus.IN_TRANSIT);
+    if (inTransitBooking) {
+      return booking.id === inTransitBooking.id;
+    }
+
+    // If no in-transit booking, look for pending or accepted bookings
     if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
       return false;
     }
-    // For IN_TRANSIT bookings, show them until they're marked as completed
-    if (booking.status === BookingStatus.IN_TRANSIT) {
-      return true;
-    }
-    // For other statuses (PENDING, ACCEPTED), show if they're the most recent
     return booking.status === BookingStatus.PENDING || booking.status === BookingStatus.ACCEPTED;
   });
 
