@@ -42,14 +42,6 @@ export default function DriverBookingManagement() {
 
       return { previousBookings };
     },
-    onSuccess: (data, variables) => {
-      console.log('Mutation successful:', data);
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      toast({
-        title: "Status Updated",
-        description: `Booking status updated to ${variables.status}`,
-      });
-    },
     onError: (error: Error, variables, context) => {
       console.error('Mutation error:', error);
       // Revert optimistic update on error
@@ -89,7 +81,6 @@ export default function DriverBookingManagement() {
     }
   };
 
-  // For now, only show the Accept/Reject buttons for PENDING status
   return (
     <div className="min-h-screen bg-background">
       <NavBar currentPage="driver" />
@@ -101,6 +92,22 @@ export default function DriverBookingManagement() {
           <CardContent>
             {currentBooking ? (
               <div className="space-y-4">
+                <div>
+                  <p className="font-semibold">Vehicle Type</p>
+                  <p className="text-muted-foreground">{currentBooking.vehicleType}</p>
+                </div>
+                <div>
+                  <p className="font-semibold">Pickup Location</p>
+                  <p className="text-muted-foreground">
+                    {currentBooking.pickupLocation || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold">Dropoff Location</p>
+                  <p className="text-muted-foreground">
+                    {currentBooking.dropoffLocation || "Not specified"}
+                  </p>
+                </div>
                 <div>
                   <p className="font-semibold">Status</p>
                   <p className={`font-medium capitalize ${getStatusColor(currentBooking.status)}`}>
