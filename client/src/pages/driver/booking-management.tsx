@@ -85,7 +85,7 @@ export default function DriverBookingManagement() {
 
                   <div className="flex gap-4 pt-4">
                     {currentBooking.status === BookingStatus.PENDING && (
-                      <>
+                      <div className="flex gap-4">
                         <Button
                           variant="default"
                           onClick={() =>
@@ -116,7 +116,7 @@ export default function DriverBookingManagement() {
                           )}
                           Reject Booking
                         </Button>
-                      </>
+                      </div>
                     )}
                     {currentBooking.status === BookingStatus.ACCEPTED && (
                       <Button
