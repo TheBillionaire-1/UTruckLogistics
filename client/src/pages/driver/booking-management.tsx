@@ -18,32 +18,14 @@ export default function DriverBookingManagement() {
       const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
       return res.json();
     },
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/bookings"] });
-      const previousBookings = queryClient.getQueryData<Booking[]>(["/api/bookings"]);
-
-      if (previousBookings) {
-        const updatedBookings = previousBookings.map(booking =>
-          booking.id === variables.bookingId
-            ? { ...booking, status: variables.status }
-            : booking
-        );
-        queryClient.setQueryData(["/api/bookings"], updatedBookings);
-      }
-
-      return { previousBookings };
-    },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
         title: "Status Updated",
-        description: `Booking status updated to ${variables.status.toLowerCase().replace('_', ' ')}`,
+        description: "The booking status has been updated successfully.",
       });
     },
-    onError: (error: Error, _, context) => {
-      if (context?.previousBookings) {
-        queryClient.setQueryData(["/api/bookings"], context.previousBookings);
-      }
+    onError: (error: Error) => {
       toast({
         title: "Update Failed",
         description: error.message,
@@ -61,31 +43,6 @@ export default function DriverBookingManagement() {
     }
     return booking.status === BookingStatus.PENDING || booking.status === BookingStatus.ACCEPTED;
   });
-
-  const handleStatusUpdate = async (status: BookingStatus) => {
-    if (!currentBooking) return;
-
-    try {
-      await statusMutation.mutateAsync({
-        bookingId: currentBooking.id,
-        status
-      });
-
-      if (status === BookingStatus.COMPLETED) {
-        // Remove the completed booking from the UI immediately
-        queryClient.setQueryData<Booking[]>(["/api/bookings"], (old) => 
-          old?.filter(booking => booking.id !== currentBooking.id) ?? []
-        );
-      }
-    } catch (error) {
-      console.error('Status update failed:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update the booking status. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   if (isLoading) {
     return (
@@ -137,7 +94,10 @@ export default function DriverBookingManagement() {
                     <>
                       <Button
                         variant="default"
-                        onClick={() => handleStatusUpdate(BookingStatus.ACCEPTED)}
+                        onClick={() => statusMutation.mutate({
+                          bookingId: currentBooking.id,
+                          status: BookingStatus.ACCEPTED
+                        })}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -147,7 +107,10 @@ export default function DriverBookingManagement() {
                       </Button>
                       <Button
                         variant="destructive"
-                        onClick={() => handleStatusUpdate(BookingStatus.CANCELLED)}
+                        onClick={() => statusMutation.mutate({
+                          bookingId: currentBooking.id,
+                          status: BookingStatus.CANCELLED
+                        })}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -161,7 +124,10 @@ export default function DriverBookingManagement() {
                   {currentBooking.status === BookingStatus.ACCEPTED && (
                     <Button
                       variant="default"
-                      onClick={() => handleStatusUpdate(BookingStatus.IN_TRANSIT)}
+                      onClick={() => statusMutation.mutate({
+                        bookingId: currentBooking.id,
+                        status: BookingStatus.IN_TRANSIT
+                      })}
                       disabled={statusMutation.isPending}
                     >
                       {statusMutation.isPending && (
@@ -174,13 +140,16 @@ export default function DriverBookingManagement() {
                   {currentBooking.status === BookingStatus.IN_TRANSIT && (
                     <Button
                       variant="default"
-                      onClick={() => handleStatusUpdate(BookingStatus.COMPLETED)}
+                      onClick={() => statusMutation.mutate({
+                        bookingId: currentBooking.id,
+                        status: BookingStatus.COMPLETED
+                      })}
                       disabled={statusMutation.isPending}
                     >
                       {statusMutation.isPending && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Mark as Delivered
+                      Complete Delivery
                     </Button>
                   )}
                 </div>
