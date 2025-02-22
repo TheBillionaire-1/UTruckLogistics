@@ -15,39 +15,29 @@ export default function DriverBookingManagement() {
 
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
-      console.log('Starting mutation with status:', status);
       const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
-      const data = await res.json();
-      console.log('Mutation response:', data);
-      return data;
+      return res.json();
     },
     onMutate: async (variables) => {
-      console.log('Optimistic update starting with:', variables);
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ["/api/bookings"] });
 
+      // Snapshot the previous value
       const previousBookings = queryClient.getQueryData<Booking[]>(["/api/bookings"]);
 
+      // Optimistically update to the new value
       if (previousBookings) {
-        const updatedBookings = previousBookings.map(booking =>
+        queryClient.setQueryData(["/api/bookings"], previousBookings.map(booking =>
           booking.id === variables.bookingId
             ? { ...booking, status: variables.status }
             : booking
-        );
-        queryClient.setQueryData(["/api/bookings"], updatedBookings);
+        ));
       }
 
       return { previousBookings };
     },
-    onSuccess: (data, variables) => {
-      console.log('Mutation successful:', data);
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      toast({
-        title: "Status Updated",
-        description: `Booking status updated to ${variables.status.toLowerCase().replace('_', ' ')}`,
-      });
-    },
-    onError: (error: Error, variables, context) => {
-      console.error('Mutation error:', error);
+    onError: (error: Error, _, context) => {
+      // Revert back to the previous state if there was an error
       if (context?.previousBookings) {
         queryClient.setQueryData(["/api/bookings"], context.previousBookings);
       }
@@ -55,6 +45,14 @@ export default function DriverBookingManagement() {
         title: "Update Failed",
         description: error.message,
         variant: "destructive",
+      });
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Status Updated",
+        description: `Booking status updated to ${variables.status.toLowerCase().replace('_', ' ')}`,
       });
     },
   });
@@ -67,14 +65,12 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the current active booking (not completed or cancelled)
+  // Get the current active booking
   const currentBooking = bookings?.find(booking => {
     // First, check if there's an in-transit booking
-    const inTransitBooking = bookings.find(b => b.status === BookingStatus.IN_TRANSIT);
-    if (inTransitBooking) {
-      return booking.id === inTransitBooking.id;
+    if (booking.status === BookingStatus.IN_TRANSIT) {
+      return true;
     }
-
     // If no in-transit booking, look for pending or accepted bookings
     if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
       return false;
@@ -84,16 +80,10 @@ export default function DriverBookingManagement() {
 
   const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
-
-    console.log('handleStatusUpdate called with:', status);
-    try {
-      await statusMutation.mutateAsync({
-        bookingId: currentBooking.id,
-        status: status
-      });
-    } catch (error) {
-      console.error('Status update failed:', error);
-    }
+    await statusMutation.mutateAsync({
+      bookingId: currentBooking.id,
+      status: status
+    });
   };
 
   return (
