@@ -42,7 +42,7 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Only show bookings that are not completed or cancelled
+  // Only show bookings that are active (not completed or cancelled)
   const currentBooking = bookings?.find(booking => 
     [BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_TRANSIT].includes(booking.status as BookingStatus)
   );
@@ -102,12 +102,14 @@ export default function DriverBookingManagement() {
                         </Button>
                         <Button
                           variant="destructive"
-                          onClick={() =>
-                            statusMutation.mutate({
+                          onClick={async () => {
+                            await statusMutation.mutateAsync({
                               bookingId: currentBooking.id,
                               status: BookingStatus.CANCELLED,
-                            })
-                          }
+                            });
+                            // Force immediate UI update
+                            await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+                          }}
                           disabled={statusMutation.isPending}
                         >
                           {statusMutation.isPending && (
@@ -138,7 +140,6 @@ export default function DriverBookingManagement() {
                       <Button
                         variant="default"
                         onClick={async () => {
-                          // Use mutateAsync to ensure completion before refetching
                           await statusMutation.mutateAsync({
                             bookingId: currentBooking.id,
                             status: BookingStatus.COMPLETED,
