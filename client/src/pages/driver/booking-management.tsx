@@ -19,13 +19,8 @@ export default function DriverBookingManagement() {
       return res.json();
     },
     onMutate: async (variables) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ["/api/bookings"] });
-
-      // Snapshot the previous value
       const previousBookings = queryClient.getQueryData<Booking[]>(["/api/bookings"]);
-
-      // Optimistically update to the new value
       if (previousBookings) {
         queryClient.setQueryData(["/api/bookings"], previousBookings.map(booking =>
           booking.id === variables.bookingId
@@ -33,11 +28,9 @@ export default function DriverBookingManagement() {
             : booking
         ));
       }
-
       return { previousBookings };
     },
     onError: (error: Error, _, context) => {
-      // Revert back to the previous state if there was an error
       if (context?.previousBookings) {
         queryClient.setQueryData(["/api/bookings"], context.previousBookings);
       }
@@ -48,7 +41,6 @@ export default function DriverBookingManagement() {
       });
     },
     onSuccess: (data, variables) => {
-      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
         title: "Status Updated",
@@ -65,13 +57,10 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Get the current active booking
   const currentBooking = bookings?.find(booking => {
-    // First, check if there's an in-transit booking
     if (booking.status === BookingStatus.IN_TRANSIT) {
       return true;
     }
-    // If no in-transit booking, look for pending or accepted bookings
     if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
       return false;
     }
@@ -80,10 +69,27 @@ export default function DriverBookingManagement() {
 
   const handleStatusUpdate = async (status: BookingStatus) => {
     if (!currentBooking) return;
-    await statusMutation.mutateAsync({
-      bookingId: currentBooking.id,
-      status: status
-    });
+    try {
+      await statusMutation.mutateAsync({
+        bookingId: currentBooking.id,
+        status: status
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+
+      if (status === BookingStatus.COMPLETED) {
+        queryClient.setQueryData<Booking[]>(["/api/bookings"], (old) => 
+          old?.filter(booking => booking.id !== currentBooking.id) ?? []
+        );
+      }
+    } catch (error) {
+      console.error('Status update failed:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update the booking status. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -120,7 +126,6 @@ export default function DriverBookingManagement() {
                   </p>
                 </div>
 
-                {/* Show action buttons based on current status */}
                 {currentBooking.status === BookingStatus.PENDING && (
                   <div className="flex gap-4 pt-4">
                     <Button
