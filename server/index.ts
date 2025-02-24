@@ -58,7 +58,7 @@ app.use((req, res, next) => {
 
   // Serve the app on port 3000
   // this serves both the API and the client
-  const PORT = 3000;
+  const PORT = 5000;
   const HOST = "0.0.0.0";
   server.listen(PORT, HOST, () => {
     log(`serving on ${HOST}:${PORT}`);
