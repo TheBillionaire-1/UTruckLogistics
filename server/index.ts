@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -52,9 +51,13 @@ app.use((req, res, next) => {
   const PORT = process.env.PORT || 5000;
   const HOST = "0.0.0.0";
 
-  const server = app.get("env") === "development" 
-    ? await setupVite(app)
-    : createServer(app);
+  const server = createServer(app);
+
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    app.use(serveStatic(app));
+  }
 
   server.listen(PORT, HOST, () => {
     log(`serving on ${HOST}:${PORT}`);
