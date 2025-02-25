@@ -4,6 +4,9 @@ import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { setupAuth } from "./auth.js";
 import { insertBookingSchema, updateBookingStatusSchema } from "@shared/schema";
+import { WebSocket } from 'ws';
+
+let wss: WebSocketServer;
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);

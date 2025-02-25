@@ -9,9 +9,23 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
-  const { data: bookings, isLoading } = useQuery<Booking[]>({
+  const { data: bookings, isLoading, refetch } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
+
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'BOOKING_STATUS_UPDATED') {
+        refetch();
+      }
+    };
+
+    return () => ws.close();
+  }, [refetch]);
 
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
