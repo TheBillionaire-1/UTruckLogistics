@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Booking, BookingStatus } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 import "leaflet/dist/leaflet.css";
 
 type VehicleLocation = {
@@ -13,12 +14,20 @@ type VehicleLocation = {
   lng: number;
 };
 
+type WSMessage = {
+  type: 'CONNECTED' | 'LOCATION_UPDATE';
+  message?: string;
+  data?: VehicleLocation;
+};
+
 export default function TrackingPage() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [vehicleLocation, setVehicleLocation] = useState<VehicleLocation>({
     lat: 0,
     lng: 0,
   });
+  const [wsRetryCount, setWsRetryCount] = useState(0);
 
   // Get current booking to check status
   const { data: bookings } = useQuery<Booking[]>({
@@ -30,55 +39,64 @@ export default function TrackingPage() {
     booking.status === BookingStatus.IN_TRANSIT
   );
 
-  useEffect(() => {
-    // Only connect to WebSocket if there's an active booking
-    if (!currentBooking) {
-      return;
-    }
+  const connectWebSocket = useCallback(() => {
+    if (!currentBooking) return;
 
-    // Set up WebSocket connection
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     const socket = new WebSocket(wsUrl);
+    let reconnectTimeout: NodeJS.Timeout;
 
-    // If we're the driver, start sending location
-    const isDriver = window.location.pathname.startsWith('/driver');
-    if (isDriver) {
-      // Request permission and start sending location
-      if ("geolocation" in navigator) {
-        const watchId = navigator.geolocation.watchPosition(
-          (position) => {
-            const location = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            socket.send(JSON.stringify(location));
-            setVehicleLocation(location);
-          },
-          (error) => console.error("Error getting location:", error),
-          { enableHighAccuracy: true }
-        );
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+      setWsRetryCount(0);
+    };
 
-        return () => {
-          navigator.geolocation.clearWatch(watchId);
-        };
-      }
-    } else {
-      // Customer: just receive location updates
-      socket.onmessage = (event) => {
-        try {
-          const location = JSON.parse(event.data);
-          setVehicleLocation(location);
-        } catch (error) {
-          console.error("Failed to parse vehicle location:", error);
+    socket.onmessage = (event) => {
+      try {
+        const message: WSMessage = JSON.parse(event.data);
+
+        if (message.type === 'LOCATION_UPDATE' && message.data) {
+          setVehicleLocation(message.data);
+        } else if (message.type === 'CONNECTED') {
+          console.log('Connected to tracking server:', message.message);
         }
-      };
-    }
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket disconnected');
+      // Implement exponential backoff for reconnection
+      const backoffTime = Math.min(1000 * Math.pow(2, wsRetryCount), 30000);
+      reconnectTimeout = setTimeout(() => {
+        setWsRetryCount(prev => prev + 1);
+        connectWebSocket();
+      }, backoffTime);
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Lost connection to tracking server. Attempting to reconnect...",
+        variant: "destructive",
+      });
+    };
 
     return () => {
       socket.close();
+      clearTimeout(reconnectTimeout);
     };
-  }, [currentBooking]);
+  }, [currentBooking, wsRetryCount, toast]);
+
+  useEffect(() => {
+    const cleanup = connectWebSocket();
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [connectWebSocket]);
 
   if (!currentBooking) {
     setLocation("/booking/details");
