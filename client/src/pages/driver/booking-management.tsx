@@ -37,7 +37,13 @@ export default function DriverBookingManagement() {
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
       try {
-        console.log(`Updating booking ${bookingId} to status ${status}`);
+        console.log(`Mutation executing for booking ${bookingId} to status ${status}`);
+
+        // Validate input
+        if (!bookingId || !status) {
+          throw new Error('Invalid booking ID or status');
+        }
+
         const res = await apiRequest(
           "PATCH",
           `/api/bookings/${bookingId}/status`,
@@ -49,6 +55,7 @@ export default function DriverBookingManagement() {
         }
 
         const data = await res.json();
+        console.log('Mutation success response:', data);
         return data;
       } catch (error) {
         console.error('Status update error:', error);
@@ -56,6 +63,8 @@ export default function DriverBookingManagement() {
       }
     },
     onSuccess: (data) => {
+      console.log('Mutation success handler, updating cache with:', data);
+
       // Update the cache with the new booking data
       queryClient.setQueryData<Booking[]>(["/api/bookings"], (oldData) => {
         if (!oldData) return [data];
@@ -64,13 +73,16 @@ export default function DriverBookingManagement() {
         );
       });
 
+      // Invalidate the query to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+
       toast({
         title: "Status Updated",
         description: "The booking status has been updated successfully.",
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error);
+      console.error('Mutation error handler:', error);
       toast({
         title: "Update Failed",
         description: error.message,
@@ -212,7 +224,7 @@ export default function DriverBookingManagement() {
                 </div>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No bookings found</p>
+              <p className="text-center text-muted-foreground">No active bookings found</p>
             )}
           </CardContent>
         </Card>
