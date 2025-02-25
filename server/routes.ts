@@ -81,8 +81,12 @@ export function registerRoutes(app: Express): Server {
 
   const httpServer = createServer(app);
 
-  // Initialize WebSocket server with the HTTP server
-  wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Initialize WebSocket server with the HTTP server on a different path than Vite's HMR
+  wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    perMessageDeflate: false // Disable compression to avoid conflicts
+  });
 
   wss.on('connection', (ws) => {
     console.log('Client connected to tracking');

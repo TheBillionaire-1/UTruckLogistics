@@ -7,7 +7,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add CORS headers for development
 app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
@@ -38,6 +43,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const server = createServer(app);
+
+  // Register routes before setting up Vite
   registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -45,13 +53,11 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error('Error:', err);
   });
 
   const PORT = Number(process.env.PORT) || 5000;
   const HOST = "0.0.0.0";
-
-  const server = createServer(app);
 
   if (app.get("env") === "development") {
     await setupVite(app, server);
