@@ -96,7 +96,7 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Find the current active booking
+  // Find the current active booking - exclude COMPLETED and CANCELLED statuses
   const currentBooking = bookings?.find(booking => 
     booking.status === BookingStatus.IN_TRANSIT ||
     booking.status === BookingStatus.PENDING ||
