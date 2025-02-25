@@ -6,6 +6,7 @@ import { setupAuth } from "./auth.js";
 import { insertBookingSchema, updateBookingStatusSchema } from "@shared/schema";
 import { WebSocket } from 'ws';
 
+// Initialize WebSocket server at module level
 let wss: WebSocketServer;
 
 export function registerRoutes(app: Express): Server {
@@ -79,23 +80,37 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  // Initialize WebSocket server with the HTTP server
+  wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   wss.on('connection', (ws) => {
     console.log('Client connected to tracking');
 
-    const interval = setInterval(() => {
-      const location = {
-        lat: 40.7128 + (Math.random() - 0.5) * 0.01,
-        lng: -74.0060 + (Math.random() - 0.5) * 0.01
-      };
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({ type: 'CONNECTED', message: 'Connected to tracking server' }));
 
-      ws.send(JSON.stringify(location));
+    const interval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const location = {
+          type: 'LOCATION_UPDATE',
+          data: {
+            lat: 40.7128 + (Math.random() - 0.5) * 0.01,
+            lng: -74.0060 + (Math.random() - 0.5) * 0.01
+          }
+        };
+        ws.send(JSON.stringify(location));
+      }
     }, 2000);
 
     ws.on('close', () => {
       clearInterval(interval);
       console.log('Client disconnected from tracking');
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      clearInterval(interval);
     });
   });
 

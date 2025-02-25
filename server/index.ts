@@ -48,7 +48,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  const PORT = process.env.PORT || 5000;
+  const PORT = Number(process.env.PORT) || 5000;
   const HOST = "0.0.0.0";
 
   const server = createServer(app);
@@ -56,10 +56,10 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    app.use(serveStatic(app));
+    serveStatic(app);
   }
 
-  server.listen(PORT, HOST, () => {
+  server.listen(PORT, () => {
     log(`serving on ${HOST}:${PORT}`);
   });
 })();

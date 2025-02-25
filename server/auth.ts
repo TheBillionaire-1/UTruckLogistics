@@ -3,8 +3,8 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
 import { storage } from "./storage";
+import { compare } from "bcrypt";
 
-// Use Express User type
 declare global {
   namespace Express {
     interface User {
@@ -35,15 +35,26 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Set up Local Strategy with hardcoded test credentials
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Check for hardcoded test credentials
-        if (username === 'G' && password === 'G') {
-          return done(null, { id: 1, username: 'G' });
+        const user = await storage.getUserByUsername(username);
+        if (!user) {
+          return done(null, false, { message: "Invalid username or password" });
         }
-        return done(null, false);
+
+        // For test user 'G', accept password 'G' directly
+        if (username === 'G' && password === 'G') {
+          return done(null, { id: user.id, username: user.username });
+        }
+
+        // For other users, verify password hash
+        const isValid = await compare(password, user.password);
+        if (!isValid) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+
+        return done(null, { id: user.id, username: user.username });
       } catch (error) {
         return done(error);
       }
@@ -51,31 +62,40 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
+
   passport.deserializeUser(async (id: number, done) => {
     try {
-      // For test user, return hardcoded user object
-      if (id === 1) {
-        done(null, { id: 1, username: 'G' });
-        return;
+      const user = await storage.getUser(id);
+      if (!user) {
+        return done(null, false);
       }
-      done(null, false);
+      done(null, { id: user.id, username: user.username });
     } catch (error) {
       done(error);
     }
   });
 
   app.post("/api/register", async (req, res) => {
-    // For test purposes, always return success with test user
-    res.status(201).json({ id: 1, username: 'G' });
+    try {
+      const user = await storage.createUser(req.body);
+      req.login({ id: user.id, username: user.username }, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Login failed after registration" });
+        }
+        res.status(201).json({ id: user.id, username: user.username });
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Registration failed" });
+    }
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
       }
       if (!user) {
-        return res.status(401).send("Invalid username or password");
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       req.login(user, (err) => {
         if (err) {
