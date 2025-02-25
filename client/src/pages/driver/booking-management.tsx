@@ -62,6 +62,8 @@ useEffect(() => {
             if (retryCount < MAX_RETRIES) {
               const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
               reconnectTimeout = setTimeout(connect, backoffDelay);
+            } else {
+              console.log('Max retries reached, stopping reconnection attempts');
             }
           }
         };
@@ -80,6 +82,8 @@ useEffect(() => {
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
           reconnectTimeout = setTimeout(connect, backoffDelay);
           retryCount++;
+        } else {
+          console.log('Max retries reached or cleanup in progress, stopping reconnection attempts');
         }
       }
     };
