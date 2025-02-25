@@ -27,6 +27,7 @@ export default function DriverBookingManagement() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log("WebSocket message received:", data); // Added logging
       if (data.type === 'BOOKING_STATUS_UPDATED') {
         queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       }
@@ -39,6 +40,7 @@ export default function DriverBookingManagement() {
     mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
       try {
         console.log(`Mutation executing for booking ${bookingId} to status ${status}`);
+        console.log("Mutation request payload:", { bookingId, status }); // Added logging
 
         // Validate input
         if (!bookingId || !status) {
@@ -51,12 +53,15 @@ export default function DriverBookingManagement() {
           { status }
         );
 
+        console.log("Mutation response:", res); // Added logging
+
         if (!res.ok) {
           throw new Error(`Failed to update status: ${res.statusText}`);
         }
 
         const data = await res.json();
         console.log('Mutation success response:', data);
+        console.log("Data transformation:", data); // Added logging for data transformation
         return data;
       } catch (error) {
         console.error('Status update error:', error);
@@ -65,6 +70,7 @@ export default function DriverBookingManagement() {
     },
     onSuccess: (data) => {
       console.log('Mutation success handler:', data);
+      console.log("Cache update initiated."); //Added logging for cache update
 
       if (data.status === BookingStatus.COMPLETED) {
         setJustCompleted(true);
@@ -79,6 +85,7 @@ export default function DriverBookingManagement() {
     },
     onError: (error: Error) => {
       console.error('Mutation error:', error);
+      console.log("State transition: Error state"); // Added logging for state transition on error
       toast({
         title: "Update Failed",
         description: error.message,
@@ -108,16 +115,6 @@ export default function DriverBookingManagement() {
   });
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
-    if (!bookingId) {
-      console.error('No booking ID provided for status update');
-      toast({
-        title: "Update Failed",
-        description: "Could not find booking to update",
-        variant: "destructive",
-      });
-      return;
-    }
-
     console.log(`Handling status update: ${bookingId} -> ${status}`);
     statusMutation.mutate({ bookingId, status });
   };
