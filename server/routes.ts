@@ -59,6 +59,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "Booking not found" });
       }
 
+      // Notify all connected clients about the status change
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'BOOKING_STATUS_UPDATED',
+            booking: updatedBooking
+          }));
+        }
+      });
+
       res.json(updatedBooking);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Invalid status update data" });
