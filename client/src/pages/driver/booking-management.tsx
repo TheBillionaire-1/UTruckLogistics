@@ -15,7 +15,7 @@ type StatusUpdatePayload = {
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
-  const { data: bookings, isLoading, refetch } = useQuery<Booking[]>({
+  const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
 
@@ -27,12 +27,12 @@ export default function DriverBookingManagement() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'BOOKING_STATUS_UPDATED') {
-        refetch();
+        queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       }
     };
 
     return () => ws.close();
-  }, [refetch]);
+  }, []);
 
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
@@ -43,9 +43,11 @@ export default function DriverBookingManagement() {
           `/api/bookings/${bookingId}/status`,
           { status }
         );
+
         if (!res.ok) {
           throw new Error(`Failed to update status: ${res.statusText}`);
         }
+
         const data = await res.json();
         return data;
       } catch (error) {
@@ -53,13 +55,19 @@ export default function DriverBookingManagement() {
         throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+    onSuccess: (data) => {
+      // Update the cache with the new booking data
+      queryClient.setQueryData<Booking[]>(["/api/bookings"], (oldData) => {
+        if (!oldData) return [data];
+        return oldData.map(booking => 
+          booking.id === data.id ? data : booking
+        );
+      });
+
       toast({
         title: "Status Updated",
         description: "The booking status has been updated successfully.",
       });
-      refetch();
     },
     onError: (error: Error) => {
       console.error('Mutation error:', error);
@@ -87,6 +95,16 @@ export default function DriverBookingManagement() {
   );
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
+    if (!bookingId) {
+      console.error('No booking ID provided for status update');
+      toast({
+        title: "Update Failed",
+        description: "Could not find booking to update",
+        variant: "destructive",
+      });
+      return;
+    }
+
     console.log(`Handling status update: ${bookingId} -> ${status}`);
     statusMutation.mutate({ bookingId, status });
   };
