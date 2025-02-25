@@ -17,12 +17,16 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
   return (
     <nav className="border-b bg-background">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/">
-          <Button variant="ghost" className="flex items-center gap-2 font-semibold text-lg p-0">
+        <div className="flex items-center gap-2 font-semibold text-lg">
+          <Button
+            variant="ghost"
+            className="p-0"
+            onClick={() => location !== "/" && window.location.replace("/")}
+          >
             <Truck className="h-6 w-6" />
-            UTruck
+            <span className="ml-2">UTruck</span>
           </Button>
-        </Link>
+        </div>
 
         <div className="flex items-center gap-4">
           {user && (

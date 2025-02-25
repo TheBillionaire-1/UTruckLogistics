@@ -20,25 +20,30 @@ export default function DriverBookingManagement() {
     queryKey: ["/api/bookings"],
   });
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;
+    let isConnecting = false;
+    let isCleanup = false;
 
     const connect = () => {
+      if (isConnecting || isCleanup) return;
+      isConnecting = true;
+
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
         ws.onopen = () => {
           console.log('WebSocket connected');
+          isConnecting = false;
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log("WebSocket message received:", data);
             if (data.type === 'BOOKING_STATUS_UPDATED') {
+              console.log("WebSocket status update received:", data);
               queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
             }
           } catch (error) {
@@ -46,24 +51,35 @@ export default function DriverBookingManagement() {
           }
         };
 
-        ws.onclose = () => {
-          console.log('WebSocket disconnected, attempting reconnect...');
-          reconnectTimeout = setTimeout(connect, 3000);
+        ws.onclose = (event) => {
+          if (!event.wasClean && !isCleanup) {
+            console.log('WebSocket connection lost, attempting reconnect...');
+            isConnecting = false;
+            reconnectTimeout = setTimeout(connect, 3000);
+          }
         };
 
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+        ws.onerror = () => {
+          isConnecting = false;
+          if (ws?.readyState !== WebSocket.CLOSED && !isCleanup) {
+            ws?.close();
+          }
         };
       } catch (error) {
         console.error('WebSocket connection error:', error);
-        reconnectTimeout = setTimeout(connect, 3000);
+        isConnecting = false;
+        if (!isCleanup) {
+          reconnectTimeout = setTimeout(connect, 3000);
+        }
       }
     };
 
     connect();
 
     return () => {
-      if (ws) {
+      isCleanup = true;
+      isConnecting = false;
+      if (ws?.readyState === WebSocket.OPEN) {
         ws.close();
       }
       if (reconnectTimeout) {
@@ -78,7 +94,34 @@ export default function DriverBookingManagement() {
         console.log(`Mutation executing for booking ${bookingId} to status ${status}`);
         console.log("Current booking state before update:", currentBooking);
         const payload = { status };
-        console.log(`PATCH request payload:`, payload); // Added logging for payload
+
+        // Validate input and transition
+        if (!bookingId || !status) {
+          throw new Error('Invalid booking ID or status');
+        }
+
+        // Validate status transitions within mutation
+        let isValidTransition = true;
+        switch (status) {
+          case BookingStatus.COMPLETED:
+            isValidTransition = currentBooking?.status === BookingStatus.IN_TRANSIT;
+            break;
+          case BookingStatus.CANCELLED:
+            isValidTransition = currentBooking?.status === BookingStatus.PENDING;
+            break;
+          case BookingStatus.ACCEPTED:
+            isValidTransition = currentBooking?.status === BookingStatus.PENDING;
+            break;
+          case BookingStatus.IN_TRANSIT:
+            isValidTransition = currentBooking?.status === BookingStatus.ACCEPTED;
+            break;
+          default:
+            isValidTransition = false;
+        }
+
+        if (!isValidTransition) {
+          throw new Error(`Invalid status transition from ${currentBooking?.status} to ${status}`);
+        }
 
         const res = await apiRequest(
           "PATCH",
@@ -91,9 +134,11 @@ export default function DriverBookingManagement() {
         }
 
         const data = await res.json();
-        console.log('API Response:', data);
-        console.log("Status response:", { status: data.status, expectedStatus: status });
-        console.log("API Response Validation:", data.status === status ? "Success" : "Failure"); // Added API response validation logging
+        console.log("API Response Validation:", {
+          status: data.status,
+          expectedStatus: status,
+          match: data.status === status ? "Success" : "Failure"
+        });
         return data;
       } catch (error) {
         console.error('Status update error:', error);
@@ -102,19 +147,12 @@ export default function DriverBookingManagement() {
     },
     onSuccess: (data) => {
       console.log("Mutation success - Updated booking data:", data);
-      console.log("Cache update initiated");
       console.log("Data transformation:", { 
         bookingId: data.id,
         oldStatus: currentBooking?.status,
-        newStatus: data.status
+        newStatus: data.status,
+        timestamp: new Date().toISOString()
       });
-      console.log("Cache update verification:", data.status); // Added cache update verification logging
-
-
-      if (data.status === BookingStatus.COMPLETED) {
-        setJustCompleted(true);
-        setTimeout(() => setJustCompleted(false), 3000);
-      }
 
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       console.log("Cache invalidation complete");
@@ -134,28 +172,77 @@ export default function DriverBookingManagement() {
     },
   });
 
-  // Find the current active booking
+  // Find the current active booking - strictly filter out completed and cancelled
   const currentBooking = bookings?.find(booking => {
     const status = booking.status;
     console.log(`Filtering booking ${booking.id} with status ${status}`);
 
-    switch (status) {
-      case BookingStatus.PENDING:
-      case BookingStatus.ACCEPTED:
-      case BookingStatus.IN_TRANSIT:
-        return true;
-      default:
-        return false;
+    // Explicitly return false for completed and cancelled
+    if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
+      console.log(`Booking ${booking.id} filtered out - ${status}`);
+      return false;
     }
+
+    // Only return true for active states
+    const isActive = [
+      BookingStatus.PENDING,
+      BookingStatus.ACCEPTED,
+      BookingStatus.IN_TRANSIT
+    ].includes(status);
+
+    console.log(`Booking ${booking.id} active status: ${isActive}`);
+    return isActive;
   });
 
   console.log("Current active booking after filtering:", currentBooking);
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
-    console.log(`Handling status update: bookingId=${bookingId}, status=${status}, before status=${currentBooking?.status}`);
-    const beforeState = {...currentBooking}; // Added logging for state transition
+    const beforeState = {...currentBooking};
+    console.log("Status update initiated:", {
+      bookingId,
+      currentStatus: beforeState?.status,
+      targetStatus: status,
+      timestamp: new Date().toISOString()
+    });
+
+    // For Complete/Cancel/Reject, validate the transition is allowed
+    let isValidTransition = true;
+
+    switch (status) {
+      case BookingStatus.COMPLETED:
+        isValidTransition = beforeState?.status === BookingStatus.IN_TRANSIT;
+        break;
+      case BookingStatus.CANCELLED:
+        isValidTransition = beforeState?.status === BookingStatus.PENDING;
+        break;
+      case BookingStatus.ACCEPTED:
+        // Accept is working correctly, use it as a reference
+        isValidTransition = beforeState?.status === BookingStatus.PENDING;
+        break;
+      case BookingStatus.IN_TRANSIT:
+        isValidTransition = beforeState?.status === BookingStatus.ACCEPTED;
+        break;
+      default:
+        isValidTransition = false;
+    }
+
+    if (!isValidTransition) {
+      console.error(`Invalid status transition from ${beforeState?.status} to ${status}`);
+      toast({
+        title: "Invalid Status Update",
+        description: `Cannot update booking from ${beforeState?.status} to ${status}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("Status transition validation passed:", {
+      from: beforeState?.status,
+      to: status,
+      timestamp: new Date().toISOString()
+    });
+
     statusMutation.mutate({ bookingId, status });
-    console.log(`Handling status update: bookingId=${bookingId}, status=${status}, after status=${currentBooking?.status}, beforeState:`, beforeState); // Added logging for state transition
   };
 
   if (isLoading) {
