@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
@@ -48,6 +49,14 @@ export default function DriverBookingManagement() {
     },
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   const currentBooking = bookings?.find(booking => {
     if (booking.status === BookingStatus.IN_TRANSIT) {
       return true;
@@ -57,14 +66,6 @@ export default function DriverBookingManagement() {
     }
     return booking.status === BookingStatus.PENDING || booking.status === BookingStatus.ACCEPTED;
   });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
