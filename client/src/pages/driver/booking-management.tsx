@@ -37,7 +37,7 @@ useEffect(() => {
         ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
         ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log(`[${new Date().toISOString()}] WebSocket connected successfully`);
           isConnecting = false;
           retryCount = 0; // Reset retry count on successful connection
         };
@@ -46,44 +46,54 @@ useEffect(() => {
           try {
             const data = JSON.parse(event.data);
             if (data.type === 'BOOKING_STATUS_UPDATED') {
-              console.log("WebSocket status update received:", data);
-              queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }).catch(console.error);
+              console.log(`[${new Date().toISOString()}] WebSocket status update:`, data);
+              // Wrap in try-catch to handle potential promise rejections
+              try {
+                queryClient.invalidateQueries({ queryKey: ["/api/bookings"] })
+                  .catch(error => {
+                    console.error(`[${new Date().toISOString()}] Cache invalidation error:`, error);
+                  });
+              } catch (error) {
+                console.error(`[${new Date().toISOString()}] Query invalidation error:`, error);
+              }
             }
           } catch (error) {
-            console.error('WebSocket message parsing error:', error);
+            console.error(`[${new Date().toISOString()}] WebSocket message parsing error:`, error);
           }
         };
 
         ws.onclose = (event) => {
           if (!event.wasClean && !isCleanup) {
-            console.log('WebSocket connection lost, attempting reconnect...');
+            console.log(`[${new Date().toISOString()}] WebSocket connection lost, attempt ${retryCount + 1}/${MAX_RETRIES}`);
             isConnecting = false;
             retryCount++;
             if (retryCount < MAX_RETRIES) {
               const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+              console.log(`[${new Date().toISOString()}] Scheduling reconnect in ${backoffDelay}ms`);
               reconnectTimeout = setTimeout(connect, backoffDelay);
             } else {
-              console.log('Max retries reached, stopping reconnection attempts');
+              console.log(`[${new Date().toISOString()}] Max retries (${MAX_RETRIES}) reached, stopping reconnection attempts`);
             }
           }
         };
 
         ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          console.error(`[${new Date().toISOString()}] WebSocket error:`, error);
           isConnecting = false;
           if (ws?.readyState !== WebSocket.CLOSED && !isCleanup) {
             ws?.close();
           }
         };
       } catch (error) {
-        console.error('WebSocket connection error:', error);
+        console.error(`[${new Date().toISOString()}] WebSocket connection error:`, error);
         isConnecting = false;
         if (!isCleanup && retryCount < MAX_RETRIES) {
           const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          console.log(`[${new Date().toISOString()}] Scheduling reconnect in ${backoffDelay}ms`);
           reconnectTimeout = setTimeout(connect, backoffDelay);
           retryCount++;
         } else {
-          console.log('Max retries reached or cleanup in progress, stopping reconnection attempts');
+          console.log(`[${new Date().toISOString()}] Max retries reached or cleanup in progress, stopping reconnection attempts`);
         }
       }
     };
@@ -91,22 +101,55 @@ useEffect(() => {
     connect();
 
     return () => {
+      console.log(`[${new Date().toISOString()}] Starting WebSocket cleanup process...`);
+      console.log(`[${new Date().toISOString()}] Current connection state:`, {
+        isConnecting,
+        retryCount,
+        hasActiveSocket: !!ws,
+        socketReadyState: ws?.readyState,
+        hasReconnectTimer: !!reconnectTimeout
+      });
+
+      // Set cleanup flag first to prevent new connections
       isCleanup = true;
       isConnecting = false;
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+
+      // Clear any pending reconnect timer
       if (reconnectTimeout) {
+        console.log(`[${new Date().toISOString()}] Clearing pending reconnect timer`);
         clearTimeout(reconnectTimeout);
+        reconnectTimeout = undefined;
+        console.log(`[${new Date().toISOString()}] Reconnect timer cleared`);
       }
+
+      // Close WebSocket if it exists
+      if (ws) {
+        try {
+          console.log(`[${new Date().toISOString()}] Attempting to close WebSocket connection`);
+
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+            console.log(`[${new Date().toISOString()}] WebSocket connection closed successfully`);
+          } else {
+            console.log(`[${new Date().toISOString()}] WebSocket already closed (state: ${ws.readyState})`);
+          }
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Error during WebSocket cleanup:`, error);
+        } finally {
+          ws = null;
+          console.log(`[${new Date().toISOString()}] WebSocket reference cleared`);
+        }
+      }
+
+      console.log(`[${new Date().toISOString()}] WebSocket cleanup process completed`);
     };
   }, []);
 
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
       try {
-        console.log(`Mutation executing for booking ${bookingId} to status ${status}`);
-        console.log("Current booking state before update:", currentBooking);
+        console.log(`[${new Date().toISOString()}] Mutation executing for booking ${bookingId} to status ${status}`);
+        console.log(`[${new Date().toISOString()}] Current booking state:`, currentBooking);
         const payload = { status };
 
         // Validate input and transition
@@ -137,50 +180,77 @@ useEffect(() => {
           throw new Error(`Invalid status transition from ${currentBooking?.status} to ${status}`);
         }
 
-        const res = await apiRequest(
-          "PATCH",
-          `/api/bookings/${bookingId}/status`,
-          payload
-        ).catch(error => {
-          console.error('API request failed:', error);
+        // Make API request with error handling
+        let res;
+        try {
+          res = await apiRequest(
+            "PATCH",
+            `/api/bookings/${bookingId}/status`,
+            payload
+          );
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] API request failed:`, error);
           throw error;
-        });
+        }
 
         if (!res.ok) {
+          const errorText = await res.text().catch(() => 'Unknown error');
+          console.error(`[${new Date().toISOString()}] API response not OK:`, {
+            status: res.status,
+            statusText: res.statusText,
+            error: errorText
+          });
           throw new Error(`Failed to update status: ${res.statusText}`);
         }
 
-        const data = await res.json();
-        console.log("API Response Validation:", {
+        const data = await res.json().catch(error => {
+          console.error(`[${new Date().toISOString()}] Failed to parse API response:`, error);
+          throw error;
+        });
+
+        console.log(`[${new Date().toISOString()}] API Response Validation:`, {
           status: data.status,
           expectedStatus: status,
           match: data.status === status ? "Success" : "Failure"
         });
+
         return data;
       } catch (error) {
-        console.error('Status update error:', error);
+        console.error(`[${new Date().toISOString()}] Status update error:`, error);
         throw error;
       }
     },
     onSuccess: (data) => {
-      console.log("Mutation success - Updated booking data:", data);
-      console.log("Data transformation:", { 
-        bookingId: data.id,
-        oldStatus: currentBooking?.status,
-        newStatus: data.status,
-        timestamp: new Date().toISOString()
-      });
+      try {
+        console.log(`[${new Date().toISOString()}] Mutation success:`, {
+          bookingId: data.id,
+          oldStatus: currentBooking?.status,
+          newStatus: data.status,
+          timestamp: new Date().toISOString()
+        });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }).catch(console.error);
-      console.log("Cache invalidation complete");
+        // Cache invalidation with error handling
+        try {
+          queryClient.invalidateQueries({ queryKey: ["/api/bookings"] })
+            .catch(error => {
+              console.error(`[${new Date().toISOString()}] Cache invalidation error:`, error);
+            });
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Error during cache invalidation:`, error);
+        }
 
-      toast({
-        title: "Status Updated",
-        description: "The booking status has been updated successfully.",
-      });
+        console.log(`[${new Date().toISOString()}] Cache invalidation completed`);
+
+        toast({
+          title: "Status Updated",
+          description: "The booking status has been updated successfully.",
+        });
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] Error in mutation success handler:`, error);
+      }
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error);
+      console.error(`[${new Date().toISOString()}] Mutation error:`, error);
       toast({
         title: "Update Failed",
         description: error.message,
@@ -192,11 +262,11 @@ useEffect(() => {
   // Find the current active booking - strictly filter out completed and cancelled
   const currentBooking = bookings?.find(booking => {
     const status = booking.status;
-    console.log(`Filtering booking ${booking.id} with status ${status}`);
+    console.log(`[${new Date().toISOString()}] Filtering booking ${booking.id} with status ${status}`);
 
     // Explicitly return false for completed and cancelled
     if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-      console.log(`Booking ${booking.id} filtered out - ${status}`);
+      console.log(`[${new Date().toISOString()}] Booking ${booking.id} filtered out - ${status}`);
       return false;
     }
 
@@ -207,15 +277,15 @@ useEffect(() => {
       BookingStatus.IN_TRANSIT
     ].includes(status);
 
-    console.log(`Booking ${booking.id} active status: ${isActive}`);
+    console.log(`[${new Date().toISOString()}] Booking ${booking.id} active status: ${isActive}`);
     return isActive;
   });
 
-  console.log("Current active booking after filtering:", currentBooking);
+  console.log(`[${new Date().toISOString()}] Current active booking after filtering:`, currentBooking);
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
     const beforeState = {...currentBooking};
-    console.log("Status update initiated:", {
+    console.log(`[${new Date().toISOString()}] Status update initiated:`, {
       bookingId,
       currentStatus: beforeState?.status,
       targetStatus: status,
@@ -243,7 +313,7 @@ useEffect(() => {
     }
 
     if (!isValidTransition) {
-      console.error(`Invalid status transition from ${beforeState?.status} to ${status}`);
+      console.error(`[${new Date().toISOString()}] Invalid status transition from ${beforeState?.status} to ${status}`);
       toast({
         title: "Invalid Status Update",
         description: `Cannot update booking from ${beforeState?.status} to ${status}`,
@@ -252,7 +322,7 @@ useEffect(() => {
       return;
     }
 
-    console.log("Status transition validation passed:", {
+    console.log(`[${new Date().toISOString()}] Status transition validation passed:`, {
       from: beforeState?.status,
       to: status,
       timestamp: new Date().toISOString()

@@ -1,6 +1,9 @@
 // Temporarily disable HMR to isolate WebSocket issues
 if (import.meta.hot) {
-  import.meta.hot.decline();
+  import.meta.hot.accept();
+  import.meta.hot.dispose(() => {
+    // Cleanup any active connections
+  });
 }
 
 import { createRoot } from "react-dom/client";
