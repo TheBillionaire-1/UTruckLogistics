@@ -22,46 +22,78 @@ export default function DriverBookingManagement() {
 
   // WebSocket connection for real-time updates
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: NodeJS.Timeout;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("WebSocket message received:", data); // Added logging
-      if (data.type === 'BOOKING_STATUS_UPDATED') {
-        queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+    const connect = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("WebSocket message received:", data);
+            if (data.type === 'BOOKING_STATUS_UPDATED') {
+              queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+            }
+          } catch (error) {
+            console.error('WebSocket message parsing error:', error);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket disconnected, attempting reconnect...');
+          reconnectTimeout = setTimeout(connect, 3000);
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+      } catch (error) {
+        console.error('WebSocket connection error:', error);
+        reconnectTimeout = setTimeout(connect, 3000);
       }
     };
 
-    return () => ws.close();
+    connect();
+
+    return () => {
+      if (ws) {
+        ws.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
   }, []);
 
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
       try {
         console.log(`Mutation executing for booking ${bookingId} to status ${status}`);
-        console.log("Mutation request payload:", { bookingId, status }); // Added logging
-
-        // Validate input
-        if (!bookingId || !status) {
-          throw new Error('Invalid booking ID or status');
-        }
+        console.log("Current booking state before update:", currentBooking);
+        const payload = { status };
+        console.log(`PATCH request payload:`, payload); // Added logging for payload
 
         const res = await apiRequest(
           "PATCH",
           `/api/bookings/${bookingId}/status`,
-          { status }
+          payload
         );
-
-        console.log("Mutation response:", res); // Added logging
 
         if (!res.ok) {
           throw new Error(`Failed to update status: ${res.statusText}`);
         }
 
         const data = await res.json();
-        console.log('Mutation success response:', data);
-        console.log("Data transformation:", data); // Added logging for data transformation
+        console.log('API Response:', data);
+        console.log("Status response:", { status: data.status, expectedStatus: status });
+        console.log("API Response Validation:", data.status === status ? "Success" : "Failure"); // Added API response validation logging
         return data;
       } catch (error) {
         console.error('Status update error:', error);
@@ -69,8 +101,15 @@ export default function DriverBookingManagement() {
       }
     },
     onSuccess: (data) => {
-      console.log('Mutation success handler:', data);
-      console.log("Cache update initiated."); //Added logging for cache update
+      console.log("Mutation success - Updated booking data:", data);
+      console.log("Cache update initiated");
+      console.log("Data transformation:", { 
+        bookingId: data.id,
+        oldStatus: currentBooking?.status,
+        newStatus: data.status
+      });
+      console.log("Cache update verification:", data.status); // Added cache update verification logging
+
 
       if (data.status === BookingStatus.COMPLETED) {
         setJustCompleted(true);
@@ -78,6 +117,8 @@ export default function DriverBookingManagement() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      console.log("Cache invalidation complete");
+
       toast({
         title: "Status Updated",
         description: "The booking status has been updated successfully.",
@@ -85,7 +126,6 @@ export default function DriverBookingManagement() {
     },
     onError: (error: Error) => {
       console.error('Mutation error:', error);
-      console.log("State transition: Error state"); // Added logging for state transition on error
       toast({
         title: "Update Failed",
         description: error.message,
@@ -94,17 +134,12 @@ export default function DriverBookingManagement() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   // Find the current active booking
   const currentBooking = bookings?.find(booking => {
-    switch (booking.status) {
+    const status = booking.status;
+    console.log(`Filtering booking ${booking.id} with status ${status}`);
+
+    switch (status) {
       case BookingStatus.PENDING:
       case BookingStatus.ACCEPTED:
       case BookingStatus.IN_TRANSIT:
@@ -114,10 +149,22 @@ export default function DriverBookingManagement() {
     }
   });
 
+  console.log("Current active booking after filtering:", currentBooking);
+
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
-    console.log(`Handling status update: ${bookingId} -> ${status}`);
+    console.log(`Handling status update: bookingId=${bookingId}, status=${status}, before status=${currentBooking?.status}`);
+    const beforeState = {...currentBooking}; // Added logging for state transition
     statusMutation.mutate({ bookingId, status });
+    console.log(`Handling status update: bookingId=${bookingId}, status=${status}, after status=${currentBooking?.status}, beforeState:`, beforeState); // Added logging for state transition
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
