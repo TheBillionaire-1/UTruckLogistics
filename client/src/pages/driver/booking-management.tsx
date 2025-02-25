@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type StatusUpdatePayload = {
   bookingId: number;
@@ -15,6 +15,7 @@ type StatusUpdatePayload = {
 
 export default function DriverBookingManagement() {
   const { toast } = useToast();
+  const [justCompleted, setJustCompleted] = useState(false);
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
@@ -73,7 +74,12 @@ export default function DriverBookingManagement() {
         );
       });
 
-      // Invalidate the query to ensure fresh data
+      // If the status was set to completed, show the completion message
+      if (data.status === BookingStatus.COMPLETED) {
+        setJustCompleted(true);
+        setTimeout(() => setJustCompleted(false), 3000); // Clear after 3 seconds
+      }
+
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
 
       toast({
@@ -224,7 +230,15 @@ export default function DriverBookingManagement() {
                 </div>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No active bookings found</p>
+              <div className="text-center space-y-4">
+                {justCompleted ? (
+                  <p className="text-green-600 font-medium">
+                    Delivery completed successfully! Waiting for new bookings...
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">No active bookings found</p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
