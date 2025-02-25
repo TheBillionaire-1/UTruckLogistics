@@ -20,14 +20,16 @@ export default function DriverBookingManagement() {
     queryKey: ["/api/bookings"],
   });
 
-  useEffect(() => {
+useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;
     let isConnecting = false;
     let isCleanup = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
 
     const connect = () => {
-      if (isConnecting || isCleanup) return;
+      if (isConnecting || isCleanup || retryCount >= MAX_RETRIES) return;
       isConnecting = true;
 
       try {
@@ -37,6 +39,7 @@ export default function DriverBookingManagement() {
         ws.onopen = () => {
           console.log('WebSocket connected');
           isConnecting = false;
+          retryCount = 0; // Reset retry count on successful connection
         };
 
         ws.onmessage = (event) => {
@@ -44,7 +47,7 @@ export default function DriverBookingManagement() {
             const data = JSON.parse(event.data);
             if (data.type === 'BOOKING_STATUS_UPDATED') {
               console.log("WebSocket status update received:", data);
-              queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }).catch(console.error);
             }
           } catch (error) {
             console.error('WebSocket message parsing error:', error);
@@ -55,11 +58,16 @@ export default function DriverBookingManagement() {
           if (!event.wasClean && !isCleanup) {
             console.log('WebSocket connection lost, attempting reconnect...');
             isConnecting = false;
-            reconnectTimeout = setTimeout(connect, 3000);
+            retryCount++;
+            if (retryCount < MAX_RETRIES) {
+              const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+              reconnectTimeout = setTimeout(connect, backoffDelay);
+            }
           }
         };
 
-        ws.onerror = () => {
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
           isConnecting = false;
           if (ws?.readyState !== WebSocket.CLOSED && !isCleanup) {
             ws?.close();
@@ -68,8 +76,10 @@ export default function DriverBookingManagement() {
       } catch (error) {
         console.error('WebSocket connection error:', error);
         isConnecting = false;
-        if (!isCleanup) {
-          reconnectTimeout = setTimeout(connect, 3000);
+        if (!isCleanup && retryCount < MAX_RETRIES) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          reconnectTimeout = setTimeout(connect, backoffDelay);
+          retryCount++;
         }
       }
     };
@@ -127,7 +137,10 @@ export default function DriverBookingManagement() {
           "PATCH",
           `/api/bookings/${bookingId}/status`,
           payload
-        );
+        ).catch(error => {
+          console.error('API request failed:', error);
+          throw error;
+        });
 
         if (!res.ok) {
           throw new Error(`Failed to update status: ${res.statusText}`);
@@ -154,7 +167,7 @@ export default function DriverBookingManagement() {
         timestamp: new Date().toISOString()
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] }).catch(console.error);
       console.log("Cache invalidation complete");
 
       toast({
@@ -216,7 +229,6 @@ export default function DriverBookingManagement() {
         isValidTransition = beforeState?.status === BookingStatus.PENDING;
         break;
       case BookingStatus.ACCEPTED:
-        // Accept is working correctly, use it as a reference
         isValidTransition = beforeState?.status === BookingStatus.PENDING;
         break;
       case BookingStatus.IN_TRANSIT:
