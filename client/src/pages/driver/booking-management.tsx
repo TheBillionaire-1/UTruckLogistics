@@ -8,6 +8,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
+type StatusUpdatePayload = {
+  bookingId: number;
+  status: BookingStatus;
+};
+
 export default function DriverBookingManagement() {
   const { toast } = useToast();
   const { data: bookings, isLoading, refetch } = useQuery<Booking[]>({
@@ -30,17 +35,34 @@ export default function DriverBookingManagement() {
   }, [refetch]);
 
   const statusMutation = useMutation({
-    mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
-      const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
-      const data = await res.json();
-      return data;
+    mutationFn: async ({ bookingId, status }: StatusUpdatePayload) => {
+      try {
+        console.log(`Updating booking ${bookingId} to status ${status}`);
+        const res = await apiRequest(
+          "PATCH",
+          `/api/bookings/${bookingId}/status`,
+          { status }
+        );
+        if (!res.ok) {
+          throw new Error(`Failed to update status: ${res.statusText}`);
+        }
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error('Status update error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
-      // Force refresh the bookings data
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "Status Updated",
+        description: "The booking status has been updated successfully.",
+      });
       refetch();
     },
     onError: (error: Error) => {
+      console.error('Mutation error:', error);
       toast({
         title: "Update Failed",
         description: error.message,
@@ -63,6 +85,11 @@ export default function DriverBookingManagement() {
     booking.status === BookingStatus.PENDING ||
     booking.status === BookingStatus.ACCEPTED
   );
+
+  const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
+    console.log(`Handling status update: ${bookingId} -> ${status}`);
+    statusMutation.mutate({ bookingId, status });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,10 +133,10 @@ export default function DriverBookingManagement() {
                     <>
                       <Button
                         variant="default"
-                        onClick={() => statusMutation.mutate({
-                          bookingId: currentBooking.id,
-                          status: BookingStatus.ACCEPTED
-                        })}
+                        onClick={() => handleStatusUpdate(
+                          currentBooking.id,
+                          BookingStatus.ACCEPTED
+                        )}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -119,10 +146,10 @@ export default function DriverBookingManagement() {
                       </Button>
                       <Button
                         variant="destructive"
-                        onClick={() => statusMutation.mutate({
-                          bookingId: currentBooking.id,
-                          status: BookingStatus.CANCELLED
-                        })}
+                        onClick={() => handleStatusUpdate(
+                          currentBooking.id,
+                          BookingStatus.CANCELLED
+                        )}
                         disabled={statusMutation.isPending}
                       >
                         {statusMutation.isPending && (
@@ -136,10 +163,10 @@ export default function DriverBookingManagement() {
                   {currentBooking.status === BookingStatus.ACCEPTED && (
                     <Button
                       variant="default"
-                      onClick={() => statusMutation.mutate({
-                        bookingId: currentBooking.id,
-                        status: BookingStatus.IN_TRANSIT
-                      })}
+                      onClick={() => handleStatusUpdate(
+                        currentBooking.id,
+                        BookingStatus.IN_TRANSIT
+                      )}
                       disabled={statusMutation.isPending}
                     >
                       {statusMutation.isPending && (
@@ -152,10 +179,10 @@ export default function DriverBookingManagement() {
                   {currentBooking.status === BookingStatus.IN_TRANSIT && (
                     <Button
                       variant="default"
-                      onClick={() => statusMutation.mutate({
-                        bookingId: currentBooking.id,
-                        status: BookingStatus.COMPLETED
-                      })}
+                      onClick={() => handleStatusUpdate(
+                        currentBooking.id,
+                        BookingStatus.COMPLETED
+                      )}
                       disabled={statusMutation.isPending}
                     >
                       {statusMutation.isPending && (
