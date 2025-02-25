@@ -95,14 +95,17 @@ export default function DriverBookingManagement() {
     );
   }
 
-  // Find the current active booking - exclude COMPLETED and CANCELLED statuses
-  const currentBooking = bookings?.find(booking => 
-    (booking.status === BookingStatus.IN_TRANSIT ||
-    booking.status === BookingStatus.PENDING ||
-    booking.status === BookingStatus.ACCEPTED) &&
-    booking.status !== BookingStatus.COMPLETED &&
-    booking.status !== BookingStatus.CANCELLED
-  );
+  // Find the current active booking
+  const currentBooking = bookings?.find(booking => {
+    switch (booking.status) {
+      case BookingStatus.PENDING:
+      case BookingStatus.ACCEPTED:
+      case BookingStatus.IN_TRANSIT:
+        return true;
+      default:
+        return false;
+    }
+  });
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
     if (!bookingId) {
@@ -110,16 +113,6 @@ export default function DriverBookingManagement() {
       toast({
         title: "Update Failed",
         description: "Could not find booking to update",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate status transitions
-    if (status === BookingStatus.COMPLETED && currentBooking?.status !== BookingStatus.IN_TRANSIT) {
-      toast({
-        title: "Invalid Status Update",
-        description: "Booking must be in transit to complete",
         variant: "destructive",
       });
       return;
