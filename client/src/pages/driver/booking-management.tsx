@@ -64,20 +64,11 @@ export default function DriverBookingManagement() {
       }
     },
     onSuccess: (data) => {
-      console.log('Mutation success handler, updating cache with:', data);
+      console.log('Mutation success handler:', data);
 
-      // Update the cache with the new booking data
-      queryClient.setQueryData<Booking[]>(["/api/bookings"], (oldData) => {
-        if (!oldData) return [data];
-        return oldData.map(booking => 
-          booking.id === data.id ? data : booking
-        );
-      });
-
-      // If the status was set to completed, show the completion message
       if (data.status === BookingStatus.COMPLETED) {
         setJustCompleted(true);
-        setTimeout(() => setJustCompleted(false), 3000); // Clear after 3 seconds
+        setTimeout(() => setJustCompleted(false), 3000);
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
@@ -88,7 +79,7 @@ export default function DriverBookingManagement() {
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error handler:', error);
+      console.error('Mutation error:', error);
       toast({
         title: "Update Failed",
         description: error.message,
