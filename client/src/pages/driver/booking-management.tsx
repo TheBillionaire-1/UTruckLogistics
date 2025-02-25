@@ -14,6 +14,7 @@ export default function DriverBookingManagement() {
     queryKey: ["/api/bookings"],
   });
 
+  // WebSocket connection for real-time updates
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
@@ -31,14 +32,13 @@ export default function DriverBookingManagement() {
   const statusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: number; status: BookingStatus }) => {
       const res = await apiRequest("PATCH", `/api/bookings/${bookingId}/status`, { status });
-      return res.json();
+      const data = await res.json();
+      return data;
     },
     onSuccess: () => {
+      // Force refresh the bookings data
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
-      toast({
-        title: "Status Updated",
-        description: "The booking status has been updated successfully.",
-      });
+      refetch();
     },
     onError: (error: Error) => {
       toast({
@@ -57,15 +57,12 @@ export default function DriverBookingManagement() {
     );
   }
 
-  const currentBooking = bookings?.find(booking => {
-    if (booking.status === BookingStatus.IN_TRANSIT) {
-      return true;
-    }
-    if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
-      return false;
-    }
-    return booking.status === BookingStatus.PENDING || booking.status === BookingStatus.ACCEPTED;
-  });
+  // Find the current active booking
+  const currentBooking = bookings?.find(booking => 
+    booking.status === BookingStatus.IN_TRANSIT ||
+    booking.status === BookingStatus.PENDING ||
+    booking.status === BookingStatus.ACCEPTED
+  );
 
   return (
     <div className="min-h-screen bg-background">
