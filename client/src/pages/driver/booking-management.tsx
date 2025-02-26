@@ -259,27 +259,8 @@ useEffect(() => {
     },
   });
 
-  // Find the current active booking - strictly filter out completed and cancelled
-  const currentBooking = bookings?.find(booking => {
-    const status = booking.status;
-    console.log(`[${new Date().toISOString()}] Filtering booking ${booking.id} with status ${status}`);
-
-    // Explicitly return false for completed and cancelled
-    if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-      console.log(`[${new Date().toISOString()}] Booking ${booking.id} filtered out - ${status}`);
-      return false;
-    }
-
-    // Only return true for active states
-    const isActive = [
-      BookingStatus.PENDING,
-      BookingStatus.ACCEPTED,
-      BookingStatus.IN_TRANSIT
-    ].includes(status);
-
-    console.log(`[${new Date().toISOString()}] Booking ${booking.id} active status: ${isActive}`);
-    return isActive;
-  });
+  // Get the latest booking regardless of status
+  const currentBooking = bookings?.[0];
 
   console.log(`[${new Date().toISOString()}] Current active booking after filtering:`, currentBooking);
 
