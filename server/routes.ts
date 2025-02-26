@@ -88,11 +88,33 @@ export function registerRoutes(app: Express): Server {
     perMessageDeflate: false // Disable compression to avoid conflicts
   });
 
-  wss.on('connection', (ws) => {
-    console.log('Client connected to tracking');
+  wss.on('connection', async (ws, req: any) => {
+    console.log('Client attempting to connect to WebSocket');
+
+    if (!req.session?.passport?.user) {
+      console.log('Authentication failed for WebSocket connection');
+      ws.close(1000, 'Authentication failed');
+      return;
+    }
+
+    const userId = req.session.passport.user;
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      console.log('User not found for WebSocket connection');
+      ws.close(1000, 'User not found');
+      return;
+    }
+
+    console.log(`User ${user.id} connected to WebSocket`);
+    (ws as any).userId = user.id;
 
     // Send initial connection confirmation
-    ws.send(JSON.stringify({ type: 'CONNECTED', message: 'Connected to tracking server' }));
+    ws.send(JSON.stringify({ 
+      type: 'CONNECTED', 
+      message: 'Connected to tracking server',
+      user: { id: user.id, username: user.username }
+    }));
 
     const interval = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -109,11 +131,11 @@ export function registerRoutes(app: Express): Server {
 
     ws.on('close', () => {
       clearInterval(interval);
-      console.log('Client disconnected from tracking');
+      console.log(`User ${user.id} disconnected from tracking`);
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      console.error(`WebSocket error for user ${user.id}:`, error);
       clearInterval(interval);
     });
   });
