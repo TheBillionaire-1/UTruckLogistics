@@ -163,7 +163,7 @@ useEffect(() => {
           case BookingStatus.COMPLETED:
             isValidTransition = currentBooking?.status === BookingStatus.IN_TRANSIT;
             break;
-          case BookingStatus.CANCELLED:
+          case BookingStatus.REJECTED:
             isValidTransition = currentBooking?.status === BookingStatus.PENDING;
             break;
           case BookingStatus.ACCEPTED:
@@ -280,7 +280,7 @@ useEffect(() => {
       case BookingStatus.COMPLETED:
         isValidTransition = beforeState?.status === BookingStatus.IN_TRANSIT;
         break;
-      case BookingStatus.CANCELLED:
+      case BookingStatus.REJECTED:
         isValidTransition = beforeState?.status === BookingStatus.PENDING;
         break;
       case BookingStatus.ACCEPTED:
@@ -377,7 +377,7 @@ useEffect(() => {
                         variant="destructive"
                         onClick={() => handleStatusUpdate(
                           currentBooking.id,
-                          BookingStatus.CANCELLED
+                          BookingStatus.REJECTED
                         )}
                         disabled={statusMutation.isPending}
                       >
@@ -450,7 +450,7 @@ const getStatusColor = (status: string) => {
       return "text-purple-600";
     case BookingStatus.COMPLETED:
       return "text-green-600";
-    case BookingStatus.CANCELLED:
+    case BookingStatus.REJECTED:
       return "text-red-600";
     default:
       return "text-gray-600";

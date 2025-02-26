@@ -8,7 +8,7 @@ export const BookingStatus = {
   ACCEPTED: "accepted",
   IN_TRANSIT: "in_transit",
   COMPLETED: "completed",
-  CANCELLED: "cancelled",
+  REJECTED: "rejected",
 } as const;
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
