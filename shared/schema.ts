@@ -67,7 +67,7 @@ export const updateBookingStatusSchema = z.object({
     BookingStatus.ACCEPTED,
     BookingStatus.IN_TRANSIT,
     BookingStatus.COMPLETED,
-    BookingStatus.CANCELLED,
+    BookingStatus.REJECTED,
   ]),
 });
 
