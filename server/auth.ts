@@ -4,6 +4,7 @@ import { Express } from "express";
 import session from "express-session";
 import { storage } from "./storage";
 import { compare } from "bcrypt";
+import rateLimit from "express-rate-limit";
 
 declare global {
   namespace Express {
@@ -15,6 +16,23 @@ declare global {
 }
 
 export function setupAuth(app: Express) {
+  // Create rate limiters for authentication endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { message: "Too many login attempts, please try again later" }
+  });
+
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // Limit each IP to 5 registration attempts per hour
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many registration attempts, please try again later" }
+  });
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID!,
     resave: false,
@@ -75,7 +93,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res) => {
+  app.post("/api/register", registerLimiter, async (req, res) => {
     try {
       const user = await storage.createUser(req.body);
       req.login({ id: user.id, username: user.username }, (err) => {
@@ -89,7 +107,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", authLimiter, (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         return next(err);
