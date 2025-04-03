@@ -13,7 +13,7 @@ export default function RoleSelectionPage() {
 
   const roleMutation = useMutation({
     mutationFn: async (role: "customer" | "driver") => {
-      await apiRequest.post("/api/user/role", { role });
+      await apiRequest("POST", "/api/user/role", { role });
     },
     onSuccess: () => {
       setLocation("/");

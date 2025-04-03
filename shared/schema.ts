@@ -50,6 +50,7 @@ export const insertUserSchema = createInsertSchema(users).extend({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   profileImage: z.string().optional(),
+  role: z.enum(["customer", "driver"]).optional(),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings)

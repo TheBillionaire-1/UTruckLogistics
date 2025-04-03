@@ -14,6 +14,7 @@ export interface IStorage {
   createBooking(booking: InsertBooking & { userId: number }): Promise<Booking>;
   getUserBookings(userId: number): Promise<Booking[]>;
   updateBookingStatus(bookingId: number, userId: number, status: UpdateBookingStatus): Promise<Booking | undefined>;
+  updateUserRole(userId: number, role: "customer" | "driver"): Promise<User | undefined>;
   sessionStore: session.Store;
 }
 
@@ -38,7 +39,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    // Insert the user data
+    const [user] = await db.insert(users).values({
+      username: insertUser.username,
+      password: insertUser.password,
+      fullName: insertUser.fullName,
+      email: insertUser.email,
+      phoneNumber: insertUser.phoneNumber,
+      profileImage: insertUser.profileImage,
+      role: insertUser.role as "customer" | "driver" | undefined
+    }).returning();
+    
     console.log(`Created user: ${user.username} with ID: ${user.id}`);
     return user;
   }
@@ -89,6 +100,27 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedBooking;
+  }
+
+  async updateUserRole(userId: number, role: "customer" | "driver"): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      return undefined;
+    }
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        role,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return updatedUser;
   }
 }
 

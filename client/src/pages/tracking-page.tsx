@@ -99,8 +99,17 @@ export default function TrackingPage() {
   }, [connectWebSocket]);
 
   if (!currentBooking) {
-    setLocation("/booking/details");
-    return null;
+    // Use useEffect to handle navigation without returning null
+    useEffect(() => {
+      setLocation("/booking/details");
+    }, [setLocation]);
+    
+    // Return a placeholder element instead of null
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting to bookings...</p>
+      </div>
+    );
   }
 
   return (

@@ -28,6 +28,15 @@ export function ProtectedRoute({
       </Route>
     );
   }
+  
+  // If user doesn't have a role and isn't already on the role selection page, redirect them there
+  if (!user.role && path !== "/role-selection") {
+    return (
+      <Route path={path}>
+        <Redirect to="/role-selection" />
+      </Route>
+    );
+  }
 
   return <Component />
 }
