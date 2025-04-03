@@ -37,9 +37,9 @@ export default function AuthPage() {
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Use useEffect to handle navigation after render
+  // Use useEffect to handle navigation after render only if the user has a role
   useEffect(() => {
-    if (user) {
+    if (user && user.role) {
       setLocation("/");
     }
   }, [user, setLocation]);

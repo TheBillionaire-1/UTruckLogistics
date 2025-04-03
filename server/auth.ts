@@ -11,6 +11,7 @@ declare global {
     interface User {
       id: number;
       username: string;
+      role?: "customer" | "driver";
     }
   }
 }
@@ -63,7 +64,11 @@ export function setupAuth(app: Express) {
 
         // For test user 'G', accept password 'G' directly
         if (username === 'G' && password === 'G') {
-          return done(null, { id: user.id, username: user.username });
+          return done(null, { 
+            id: user.id, 
+            username: user.username,
+            ...(user.role ? { role: user.role } : {})
+          });
         }
 
         // For other users, verify password hash
@@ -72,7 +77,11 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
-        return done(null, { id: user.id, username: user.username });
+        return done(null, { 
+          id: user.id, 
+          username: user.username,
+          ...(user.role ? { role: user.role } : {})
+        });
       } catch (error) {
         return done(error);
       }
@@ -87,7 +96,11 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      done(null, { id: user.id, username: user.username });
+      done(null, { 
+        id: user.id, 
+        username: user.username,
+        ...(user.role ? { role: user.role } : {})
+      });
     } catch (error) {
       done(error);
     }
@@ -96,11 +109,16 @@ export function setupAuth(app: Express) {
   app.post("/api/register", registerLimiter, async (req, res) => {
     try {
       const user = await storage.createUser(req.body);
-      req.login({ id: user.id, username: user.username }, (err) => {
+      const userSession = { 
+        id: user.id, 
+        username: user.username,
+        ...(user.role ? { role: user.role } : {})
+      };
+      req.login(userSession, (err) => {
         if (err) {
           return res.status(500).json({ message: "Login failed after registration" });
         }
-        res.status(201).json({ id: user.id, username: user.username });
+        res.status(201).json(userSession);
       });
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Registration failed" });

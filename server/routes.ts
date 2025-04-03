@@ -79,9 +79,30 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    try {
+      // Fetch the complete user data from the database
+      const fullUser = await storage.getUser(req.user.id);
+      if (!fullUser) {
+        return res.sendStatus(404);
+      }
+      
+      // Return a safe version of the user data (without password)
+      const safeUser = {
+        id: fullUser.id,
+        username: fullUser.username,
+        ...(fullUser.role ? { role: fullUser.role } : {}),
+        fullName: fullUser.fullName,
+        email: fullUser.email,
+        phoneNumber: fullUser.phoneNumber
+      };
+      
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      res.status(500).json({ message: "Failed to retrieve user data" });
+    }
   });
 
   app.post("/api/user/role", async (req, res) => {
@@ -91,8 +112,25 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ message: "Invalid role" });
     }
     try {
-      await storage.updateUserRole(req.user!.id, role);
-      res.sendStatus(200);
+      const updatedUser = await storage.updateUserRole(req.user!.id, role);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update the session with the new role
+      req.user.role = role;
+      
+      // Return the updated user data (without password)
+      const safeUser = {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        role: updatedUser.role,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber
+      };
+      
+      res.status(200).json(safeUser);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Users, Truck } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { User } from "@shared/schema";
 
 export default function RoleSelectionPage() {
   const [, setLocation] = useLocation();
@@ -13,10 +14,19 @@ export default function RoleSelectionPage() {
 
   const roleMutation = useMutation({
     mutationFn: async (role: "customer" | "driver") => {
-      await apiRequest("POST", "/api/user/role", { role });
+      const res = await apiRequest("POST", "/api/user/role", { role });
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser: User) => {
+      // Update the user data in the React Query cache
+      queryClient.setQueryData(["/api/user"], updatedUser);
+      // Navigate to the home page
       setLocation("/");
+      // Show success message
+      toast({
+        title: "Role updated",
+        description: `You are now a ${updatedUser.role}`,
+      });
     },
     onError: (error: Error) => {
       toast({

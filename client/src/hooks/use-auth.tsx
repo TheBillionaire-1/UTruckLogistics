@@ -7,6 +7,7 @@ import {
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -22,6 +23,8 @@ type LoginData = Pick<InsertUser, "username" | "password">;
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
   const {
     data: user,
     error,
@@ -38,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      // If user has no role, redirect to role selection page using wouter
+      if (!user.role) {
+        setLocation('/role-selection');
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -60,8 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Your credentials:\nUsername: ${user.username}\nPlease save these for future logins.`,
         duration: 10000, // Show for 10 seconds
       });
+      // If user has no role, redirect to role selection page using wouter
       if (!user.role) {
-        window.location.href = '/role-selection';
+        setLocation('/role-selection');
       }
     },
     onError: (error: Error) => {
@@ -79,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      // Redirect to auth page after logout
+      setLocation('/auth');
     },
     onError: (error: Error) => {
       toast({
