@@ -60,6 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Your credentials:\nUsername: ${user.username}\nPlease save these for future logins.`,
         duration: 10000, // Show for 10 seconds
       });
+      if (!user.role) {
+        window.location.href = '/role-selection';
+      }
     },
     onError: (error: Error) => {
       toast({

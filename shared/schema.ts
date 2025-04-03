@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   email: text("email"),
   phoneNumber: text("phone_number"),
   profileImage: text("profile_image"),
+  role: text("role").$type<"customer" | "driver">(),
 });
 
 // Enhanced bookings table with additional fields

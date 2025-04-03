@@ -79,6 +79,25 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json(req.user);
+  });
+
+  app.post("/api/user/role", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { role } = req.body;
+    if (role !== "customer" && role !== "driver") {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+    try {
+      await storage.updateUserRole(req.user!.id, role);
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize WebSocket server with the HTTP server on a different path than Vite's HMR
