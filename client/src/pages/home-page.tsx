@@ -1,9 +1,65 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { Truck, Package, MapPin, Clock } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Truck, Package, MapPin, Clock, Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
+import { useAuth } from "@/hooks/use-auth";
+import CustomerDashboard from "./customer/dashboard";
+import DriverDashboard from "./driver/dashboard";
 
 export default function HomePage() {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // If user has a role, redirect to the appropriate dashboard
+  useEffect(() => {
+    if (user && user.role === "customer") {
+      // Don't redirect if we're already on the dashboard
+      if (window.location.pathname === "/") {
+        setLocation("/customer/dashboard");
+      }
+    } else if (user && user.role === "driver") {
+      // Don't redirect if we're already on the dashboard
+      if (window.location.pathname === "/") {
+        setLocation("/driver/dashboard");
+      }
+    }
+  }, [user, setLocation]);
+
+  // If still loading, show a loading spinner
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
+  // If user is not logged in, show the landing page
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  // If user doesn't have a role yet, redirect to role selection
+  if (user && !user.role) {
+    setLocation("/role-selection");
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // For logged-in users with roles, this will only show briefly before redirect in useEffect
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  );
+}
+
+// This is the landing page for users who are not logged in
+function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -17,9 +73,9 @@ export default function HomePage() {
             From small deliveries to large freight, we connect you with reliable
             transport services tailored to your needs.
           </p>
-          <Link href="/booking">
+          <Link href="/auth">
             <Button size="lg" className="font-semibold">
-              Book Transport Now
+              Get Started
             </Button>
           </Link>
         </div>
