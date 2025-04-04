@@ -21,12 +21,17 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
     <nav className="border-b bg-background">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 font-semibold text-lg">
-          <a href="/" className="no-underline">
-            <Button variant="ghost" className="p-0">
-              <Truck className="h-6 w-6" />
-              <span className="ml-2">UTruck</span>
-            </Button>
-          </a>
+          <Button 
+            variant="ghost" 
+            className="p-0"
+            onClick={() => {
+              // Force a full page reload to navigate to the landing page
+              window.location.href = "/?force=landing";
+            }}
+          >
+            <Truck className="h-6 w-6" />
+            <span className="ml-2">UTruck</span>
+          </Button>
         </div>
 
         <div className="flex items-center gap-4">

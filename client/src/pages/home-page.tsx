@@ -12,6 +12,15 @@ export default function HomePage() {
 
   // If user has a role, redirect to the appropriate dashboard
   useEffect(() => {
+    // Check if there's a force parameter to show landing page regardless of login state
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceLanding = urlParams.get('force') === 'landing';
+    
+    // If force=landing is set, don't redirect and show the landing page
+    if (forceLanding) {
+      return;
+    }
+    
     if (user && user.role === "customer") {
       // Don't redirect if we're already on the dashboard
       if (window.location.pathname === "/") {
@@ -29,6 +38,10 @@ export default function HomePage() {
     // We don't redirect for non-logged-in users - they see the landing page
   }, [user, setLocation]);
 
+  // Check if force=landing parameter is set
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceLanding = urlParams.get('force') === 'landing';
+
   // If still loading, show a loading spinner
   if (isLoading) {
     return (
@@ -38,8 +51,8 @@ export default function HomePage() {
     );
   }
   
-  // If user is not logged in, show the landing page
-  if (!user) {
+  // If user is not logged in or force=landing is set, show the landing page
+  if (!user || forceLanding) {
     return <LandingPage />;
   }
 
@@ -51,8 +64,10 @@ export default function HomePage() {
   );
 }
 
-// This is the landing page - the original home page design for users who are not logged in
+// This is the landing page - shown to non-logged-in users and logged-in users with force=landing
 function LandingPage() {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -66,11 +81,23 @@ function LandingPage() {
             From small deliveries to large freight, we connect you with reliable
             transport services tailored to your needs.
           </p>
-          <Link href="/auth">
-            <Button size="lg" className="font-semibold">
-              Get Started
-            </Button>
-          </Link>
+          
+          {/* Show different buttons based on login state */}
+          {!user ? (
+            // For logged out users, show the Get Started button
+            <Link href="/auth">
+              <Button size="lg" className="font-semibold">
+                Get Started
+              </Button>
+            </Link>
+          ) : (
+            // For logged in users, show a button to their dashboard
+            <Link href={user.role === "customer" ? "/customer/dashboard" : "/driver/dashboard"}>
+              <Button size="lg" className="font-semibold">
+                Go to Dashboard
+              </Button>
+            </Link>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
