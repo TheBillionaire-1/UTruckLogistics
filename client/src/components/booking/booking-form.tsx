@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,6 +18,7 @@ import { useMutation } from "@tanstack/react-query";
 import { LocationData } from "@/pages/booking-page";
 import VehicleSelect from "./vehicle-select";
 import CargoTypeSelect from "./cargo-type-select";
+import CargoWeightSelect from "./cargo-weight-select";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -72,6 +74,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
     defaultValues: {
       vehicleType: "",
       cargoType: "dry_goods", // Default cargo type
+      cargoWeight: 1000, // Default cargo weight (1 ton)
       pickupLocation: "",
       dropoffLocation: "",
       pickupCoords: "",
@@ -196,6 +199,15 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
       });
       return;
     }
+    
+    if (data.cargoWeight === undefined || data.cargoWeight < 0) {
+      toast({
+        title: "Cargo Weight Required",
+        description: "Please specify a valid cargo weight",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const bookingData = {
       ...data,
@@ -221,8 +233,34 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
                 <VehicleSelect
                   value={field.value}
                   onChange={field.onChange}
+                  cargoWeight={form.getValues("cargoWeight")}
+                  onCargoWeightChange={(weight) => form.setValue("cargoWeight", weight)}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="cargoWeight"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cargo Weight</FormLabel>
+              <FormControl>
+                <CargoWeightSelect
+                  value={field.value}
+                  onChange={(value) => {
+                    field.onChange(value);
+                  }}
+                  vehicleType={form.getValues("vehicleType")}
+                  onVehicleTypeChange={(vehicleType) => form.setValue("vehicleType", vehicleType)}
+                />
+              </FormControl>
+              <FormDescription className="text-xs">
+                Select the weight of your cargo. Vehicle type will be adjusted automatically.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

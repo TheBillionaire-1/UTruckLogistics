@@ -345,6 +345,13 @@ useEffect(() => {
                     {!currentBooking.cargoType && "Not specified"}
                   </p>
                 </div>
+                
+                <div className="space-y-2">
+                  <p className="font-semibold">Cargo Weight</p>
+                  <p className="text-muted-foreground">
+                    {currentBooking.cargoWeight ? `${(currentBooking.cargoWeight / 1000).toFixed(1)} tons (${currentBooking.cargoWeight} kg)` : "Not specified"}
+                  </p>
+                </div>
 
                 <div className="space-y-2">
                   <p className="font-semibold">Pickup Location</p>

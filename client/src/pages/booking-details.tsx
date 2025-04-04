@@ -86,6 +86,13 @@ export default function BookingDetailsPage() {
                   {!latestBooking.cargoType && "Not specified"}
                 </p>
               </div>
+              
+              <div className="space-y-2">
+                <p className="font-semibold">Cargo Weight</p>
+                <p className="text-muted-foreground">
+                  {latestBooking.cargoWeight ? `${(latestBooking.cargoWeight / 1000).toFixed(1)} tons (${latestBooking.cargoWeight} kg)` : "Not specified"}
+                </p>
+              </div>
 
               <div className="space-y-2">
                 <p className="font-semibold">Pickup Location</p>
