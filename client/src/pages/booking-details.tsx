@@ -78,6 +78,16 @@ export default function BookingDetailsPage() {
               </div>
 
               <div className="space-y-2">
+                <p className="font-semibold">Cargo Type</p>
+                <p className="text-muted-foreground">
+                  {latestBooking.cargoType === "dry_goods" && "Dry Goods"}
+                  {latestBooking.cargoType === "food" && "Food"}
+                  {latestBooking.cargoType === "moving_services" && "Moving Services"}
+                  {!latestBooking.cargoType && "Not specified"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <p className="font-semibold">Pickup Location</p>
                 <p className="text-muted-foreground break-words">
                   {latestBooking.pickupLocation || "Not specified"}

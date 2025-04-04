@@ -22,7 +22,7 @@ export default function DriverBookingManagement() {
 
 useEffect(() => {
     let ws: WebSocket | null = null;
-    let reconnectTimeout: NodeJS.Timeout;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
     let isConnecting = false;
     let isCleanup = false;
     let retryCount = 0;
@@ -118,7 +118,7 @@ useEffect(() => {
       if (reconnectTimeout) {
         console.log(`[${new Date().toISOString()}] Clearing pending reconnect timer`);
         clearTimeout(reconnectTimeout);
-        reconnectTimeout = undefined;
+        reconnectTimeout = null;
         console.log(`[${new Date().toISOString()}] Reconnect timer cleared`);
       }
 
@@ -334,6 +334,16 @@ useEffect(() => {
                 <div className="space-y-2">
                   <p className="font-semibold">Vehicle Type</p>
                   <p className="text-muted-foreground">{currentBooking.vehicleType}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="font-semibold">Cargo Type</p>
+                  <p className="text-muted-foreground">
+                    {currentBooking.cargoType === "dry_goods" && "Dry Goods"}
+                    {currentBooking.cargoType === "food" && "Food"}
+                    {currentBooking.cargoType === "moving_services" && "Moving Services"}
+                    {!currentBooking.cargoType && "Not specified"}
+                  </p>
                 </div>
 
                 <div className="space-y-2">

@@ -14,6 +14,15 @@ export const BookingStatus = {
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
+// Define cargo types
+export const CargoType = {
+  DRY_GOODS: "dry_goods",
+  FOOD: "food",
+  MOVING_SERVICES: "moving_services",
+} as const;
+
+export type CargoType = (typeof CargoType)[keyof typeof CargoType];
+
 // Enhanced user table with profile information
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -31,6 +40,7 @@ export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   vehicleType: text("vehicle_type").notNull(),
+  cargoType: text("cargo_type").$type<CargoType>().notNull().default(CargoType.DRY_GOODS),
   pickupLocation: text("pickup_location").notNull(),
   dropoffLocation: text("dropoff_location").notNull(),
   pickupCoords: text("pickup_coords").notNull(),
@@ -56,6 +66,11 @@ export const insertUserSchema = createInsertSchema(users).extend({
 export const insertBookingSchema = createInsertSchema(bookings)
   .omit({ id: true, userId: true, updatedAt: true, createdAt: true })
   .extend({
+    cargoType: z.enum([
+      CargoType.DRY_GOODS,
+      CargoType.FOOD,
+      CargoType.MOVING_SERVICES,
+    ]),
     pickupCoords: z.string(),
     dropoffCoords: z.string(),
     estimatedPrice: z.string().optional(),

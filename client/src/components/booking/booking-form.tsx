@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { LocationData } from "@/pages/booking-page";
 import VehicleSelect from "./vehicle-select";
+import CargoTypeSelect from "./cargo-type-select";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -70,6 +71,7 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
     resolver: zodResolver(insertBookingSchema),
     defaultValues: {
       vehicleType: "",
+      cargoType: "dry_goods", // Default cargo type
       pickupLocation: "",
       dropoffLocation: "",
       pickupCoords: "",
@@ -185,6 +187,15 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
       });
       return;
     }
+    
+    if (!data.cargoType) {
+      toast({
+        title: "Cargo Type Required",
+        description: "Please select a cargo type",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const bookingData = {
       ...data,
@@ -208,6 +219,23 @@ export default function BookingForm({ onLocationSelect, locationData }: Props) {
               <FormLabel>Vehicle Type</FormLabel>
               <FormControl>
                 <VehicleSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="cargoType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cargo Type</FormLabel>
+              <FormControl>
+                <CargoTypeSelect
                   value={field.value}
                   onChange={field.onChange}
                 />
