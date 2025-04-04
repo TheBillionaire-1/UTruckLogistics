@@ -4,6 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 
 const app = express();
+// Enable trust proxy - needed for rate limiting behind proxies
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

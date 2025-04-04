@@ -108,6 +108,12 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", registerLimiter, async (req, res) => {
     try {
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
       const user = await storage.createUser(req.body);
       const userSession = { 
         id: user.id, 
@@ -121,25 +127,49 @@ export function setupAuth(app: Express) {
         res.status(201).json(userSession);
       });
     } catch (error: any) {
+      console.error("Registration error:", error);
+      // Check for duplicate key violation
+      if (error.message && error.message.includes('duplicate key value violates')) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
       res.status(400).json({ message: error.message || "Registration failed" });
     }
   });
 
   app.post("/api/login", authLimiter, (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return next(err);
+    console.log(`Login attempt for username: ${req.body.username}`);
+    
+    // First check if username exists to provide better error message
+    storage.getUserByUsername(req.body.username).then(existingUser => {
+      if (!existingUser) {
+        console.log(`Login failed: Username ${req.body.username} not found`);
+        return res.status(401).json({ message: "Invalid username or password" });
       }
-      if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
-      }
-      req.login(user, (err) => {
+      
+      // If user exists, proceed with password verification
+      passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) {
+          console.error("Login authentication error:", err);
           return next(err);
         }
-        return res.status(200).json(user);
-      });
-    })(req, res, next);
+        if (!user) {
+          console.log(`Login failed: Incorrect password for ${req.body.username}`);
+          return res.status(401).json({ message: "Invalid username or password" });
+        }
+        
+        console.log(`Login successful for user: ${user.username}`);
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Session creation error:", err);
+            return next(err);
+          }
+          return res.status(200).json(user);
+        });
+      })(req, res, next);
+    }).catch(error => {
+      console.error("Login database error:", error);
+      return res.status(500).json({ message: "An error occurred during login" });
+    });
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -147,10 +177,5 @@ export function setupAuth(app: Express) {
       if (err) return next(err);
       res.sendStatus(200);
     });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
   });
 }
