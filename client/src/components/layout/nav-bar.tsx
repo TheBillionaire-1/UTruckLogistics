@@ -11,7 +11,9 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
 
+  // Determine if we're currently on a driver page by checking both the prop and the URL path
   const isDriverPage = currentPage === "driver" || location.startsWith("/driver");
+  console.log(`NavBar render - currentPage: ${currentPage}, location: ${location}, isDriverPage: ${isDriverPage}`);
   const isDashboardVisible = user && user.role;
   const homePath = user && user.role === "customer" ? "/customer/dashboard" : user && user.role === "driver" ? "/driver/dashboard" : "/";
 
@@ -44,9 +46,33 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
               {isDashboardVisible && (
                 <Button 
                   variant="ghost"
-                  onClick={() => {
-                    // Force a redirect to the other dashboard view
-                    window.location.href = isDriverPage ? "/customer/dashboard" : "/driver/dashboard";
+                  onClick={async () => {
+                    try {
+                      // Log the current state for debugging
+                      console.log(`Current location: ${location}, isDriverPage: ${isDriverPage}`);
+                      
+                      // First wait for a short time to ensure any pending state updates complete
+                      await new Promise(resolve => setTimeout(resolve, 100));
+                      
+                      // Then force a redirect to the other dashboard view
+                      let targetPath = isDriverPage ? "/customer/dashboard" : "/driver/dashboard";
+                      
+                      // Extra safeguard to ensure we're redirecting correctly
+                      if (location.includes("/driver")) {
+                        targetPath = "/customer/dashboard";
+                        console.log("Force redirect to customer dashboard based on URL path");
+                      } else if (location.includes("/customer")) {
+                        targetPath = "/driver/dashboard";
+                        console.log("Force redirect to driver dashboard based on URL path");
+                      }
+                      
+                      console.log(`Redirecting to: ${targetPath}`);
+                      
+                      // Use window.location for a full page reload to ensure proper routing
+                      window.location.href = targetPath;
+                    } catch (error) {
+                      console.error("Error during navigation:", error);
+                    }
                   }}
                 >
                   Switch to {isDriverPage ? "Customer" : "Driver"} View
