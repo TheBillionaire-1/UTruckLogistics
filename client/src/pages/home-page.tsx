@@ -4,9 +4,8 @@ import { Link, useLocation } from "wouter";
 import { Truck, Package, MapPin, Clock, Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useAuth } from "@/hooks/use-auth";
-import CustomerDashboard from "./customer/dashboard";
-import DriverDashboard from "./driver/dashboard";
 
+// This is our main HomePage component that handles routing logic
 export default function HomePage() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -23,7 +22,11 @@ export default function HomePage() {
       if (window.location.pathname === "/") {
         setLocation("/driver/dashboard");
       }
+    } else if (user && !user.role) {
+      // If user doesn't have a role yet, redirect to role selection
+      setLocation("/role-selection");
     }
+    // We don't redirect for non-logged-in users - they see the landing page
   }, [user, setLocation]);
 
   // If still loading, show a loading spinner
@@ -40,17 +43,7 @@ export default function HomePage() {
     return <LandingPage />;
   }
 
-  // If user doesn't have a role yet, redirect to role selection
-  if (user && !user.role) {
-    setLocation("/role-selection");
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  // For logged-in users with roles, this will only show briefly before redirect in useEffect
+  // If we're still on this page after logging in but before redirection, show loading
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Loader2 className="h-8 w-8 animate-spin" />
@@ -58,7 +51,7 @@ export default function HomePage() {
   );
 }
 
-// This is the landing page for users who are not logged in
+// This is the landing page - the original home page design for users who are not logged in
 function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
