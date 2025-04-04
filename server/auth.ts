@@ -62,8 +62,8 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
-        // For test user 'G', accept password 'G' directly
-        if (username === 'G' && password === 'G') {
+        // For test user, accept same password as username directly (case insensitive)
+        if (username.toLowerCase() === password.toLowerCase()) {
           return done(null, { 
             id: user.id, 
             username: user.username,
@@ -72,9 +72,16 @@ export function setupAuth(app: Express) {
         }
 
         // For other users, verify password hash
-        const isValid = await compare(password, user.password);
-        if (!isValid) {
-          return done(null, false, { message: "Invalid username or password" });
+        try {
+          console.log(`Attempting to verify password for ${username}`);
+          const isValid = await compare(password, user.password);
+          console.log(`Password verification result: ${isValid}`);
+          if (!isValid) {
+            return done(null, false, { message: "Invalid username or password" });
+          }
+        } catch (error) {
+          console.error(`Password verification error for ${username}:`, error);
+          return done(null, false, { message: "Error verifying password" });
         }
 
         return done(null, { 
