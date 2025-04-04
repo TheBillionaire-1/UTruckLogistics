@@ -48,30 +48,32 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
                   variant="ghost"
                   onClick={async () => {
                     try {
-                      // Log the current state for debugging
-                      console.log(`Current location: ${location}, isDriverPage: ${isDriverPage}`);
+                      // Get the current user role first to determine the target role
+                      const targetRole = user.role === "driver" ? "customer" : "driver";
+                      console.log(`Current user role: ${user.role}, switching to: ${targetRole}`);
                       
-                      // First wait for a short time to ensure any pending state updates complete
-                      await new Promise(resolve => setTimeout(resolve, 100));
+                      // First update the user role in the database via API call
+                      const updateRoleResponse = await fetch('/api/user/role', {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ role: targetRole })
+                      });
                       
-                      // Then force a redirect to the other dashboard view
-                      let targetPath = isDriverPage ? "/customer/dashboard" : "/driver/dashboard";
-                      
-                      // Extra safeguard to ensure we're redirecting correctly
-                      if (location.includes("/driver")) {
-                        targetPath = "/customer/dashboard";
-                        console.log("Force redirect to customer dashboard based on URL path");
-                      } else if (location.includes("/customer")) {
-                        targetPath = "/driver/dashboard";
-                        console.log("Force redirect to driver dashboard based on URL path");
+                      if (!updateRoleResponse.ok) {
+                        throw new Error(`Failed to update role: ${updateRoleResponse.statusText}`);
                       }
                       
-                      console.log(`Redirecting to: ${targetPath}`);
+                      // After role update, redirect to the appropriate dashboard
+                      const targetPath = targetRole === "driver" ? "/driver/dashboard" : "/customer/dashboard";
+                      console.log(`Role updated successfully. Redirecting to: ${targetPath}`);
                       
-                      // Use window.location for a full page reload to ensure proper routing
-                      window.location.href = targetPath;
+                      // Use window.location.replace for a cleaner navigation
+                      window.location.replace(targetPath);
                     } catch (error) {
-                      console.error("Error during navigation:", error);
+                      console.error("Error during role switching:", error);
+                      alert("Failed to switch roles. Please try again.");
                     }
                   }}
                 >

@@ -136,6 +136,43 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // PATCH endpoint for updating user role - used for role switching
+  app.patch("/api/user/role", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { role } = req.body;
+    if (role !== "customer" && role !== "driver") {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+    
+    console.log(`Switching user ${req.user!.id} role to ${role}`);
+    
+    try {
+      const updatedUser = await storage.updateUserRole(req.user!.id, role);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update the session with the new role
+      req.user.role = role;
+      console.log(`User role updated successfully to ${role}`);
+      
+      // Return the updated user data (without password)
+      const safeUser = {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        role: updatedUser.role,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber
+      };
+      
+      res.status(200).json(safeUser);
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize WebSocket server with the HTTP server on a different path than Vite's HMR
