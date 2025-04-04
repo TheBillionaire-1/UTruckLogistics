@@ -40,13 +40,17 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
                 </Link>
               )}
               
-              {/* Role Switching Link */}
+              {/* Role Switching Link - temporary for dev purposes */}
               {isDashboardVisible && (
-                <Link href={isDriverPage ? "/customer/dashboard" : "/driver/dashboard"}>
-                  <Button variant="ghost">
-                    Switch to {isDriverPage ? "Customer" : "Driver"} View
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost"
+                  onClick={() => {
+                    // Force a redirect to the other dashboard view
+                    window.location.href = isDriverPage ? "/customer/dashboard" : "/driver/dashboard";
+                  }}
+                >
+                  Switch to {isDriverPage ? "Customer" : "Driver"} View
+                </Button>
               )}
               
               {/* Book Transport - only visible for customers */}

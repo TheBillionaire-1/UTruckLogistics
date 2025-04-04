@@ -5,7 +5,7 @@ import { Booking } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, PackageOpen, Clock, History, Car, MapIcon } from "lucide-react";
+import { Loader2, MapPin, PackageOpen, Clock, History, Car, MapIcon, Package } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -56,10 +56,63 @@ export default function CustomerDashboard() {
       
       <main className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <Button onClick={() => setLocation("/booking")} className="bg-primary">Book New Transport</Button>
+          <h1 className="text-2xl font-bold">Customer Dashboard</h1>
+          <Button 
+            onClick={() => setLocation("/booking")} 
+            className="bg-primary hover:bg-primary/90"
+            size="lg"
+          >
+            <Package className="mr-2 h-5 w-5" />
+            Book New Transport
+          </Button>
         </div>
 
+        {/* Current Transport Card */}
+        {/* Quick Booking Card - Always visible */}
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
+          <Card className="md:col-span-2">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Quick Book</h2>
+                </div>
+                <p className="text-muted-foreground">Create a new booking for cargo transport services</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Button 
+                    onClick={() => setLocation("/booking")}
+                    variant="default"
+                    className="bg-primary/90 hover:bg-primary"
+                  >
+                    New Booking
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Stats Card */}
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase mb-4">Your Statistics</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Total Bookings</span>
+                  <span className="font-medium">{bookings?.length || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Completed</span>
+                  <span className="font-medium">{completedBookings.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Active</span>
+                  <span className="font-medium">{activeBookings.length}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
         {/* Current Transport Card */}
         {latestActiveBooking ? (
           <Card className="mb-6 border-l-4 border-l-primary">
