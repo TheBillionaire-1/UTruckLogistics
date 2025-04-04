@@ -21,17 +21,12 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
     <nav className="border-b bg-background">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 font-semibold text-lg">
-          <Button 
-            variant="ghost" 
-            className="p-0"
-            onClick={() => {
-              // Use window.location for a full redirect to ensure proper routing to home page
-              window.location.href = '/';
-            }}
-          >
-            <Truck className="h-6 w-6" />
-            <span className="ml-2">UTruck</span>
-          </Button>
+          <a href="/" className="no-underline">
+            <Button variant="ghost" className="p-0">
+              <Truck className="h-6 w-6" />
+              <span className="ml-2">UTruck</span>
+            </Button>
+          </a>
         </div>
 
         <div className="flex items-center gap-4">
@@ -39,18 +34,15 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
             <>
               {/* Dashboard Link */}
               {isDashboardVisible && (
-                <Button 
-                  variant="ghost" 
-                  className="flex items-center gap-1"
-                  onClick={() => {
-                    // Navigate based on user role
-                    const dashboardPath = user.role === "customer" ? "/customer/dashboard" : "/driver/dashboard";
-                    window.location.href = dashboardPath;
-                  }}
+                <a 
+                  href={user.role === "customer" ? "/customer/dashboard" : "/driver/dashboard"} 
+                  className="no-underline"
                 >
-                  <Home className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
+                  <Button variant="ghost" className="flex items-center gap-1">
+                    <Home className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Button>
+                </a>
               )}
               
               {/* Role Switching Link - temporary for dev purposes */}
