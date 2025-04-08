@@ -109,7 +109,5 @@ Enterprises requiring a scalable solution to manage high-volume freight operatio
 ## Contact
 For questions or support regarding UTruckLogistics:
 
-## Email: support@utrucklogistics.com 
-
-GitHub Issues: Submit an Issue 
+Email: support@utrucklogistics.com
 
