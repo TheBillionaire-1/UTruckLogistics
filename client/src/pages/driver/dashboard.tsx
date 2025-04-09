@@ -5,7 +5,7 @@ import { Booking } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, PackageOpen, Clock, TrendingUp, Activity, RotateCw } from "lucide-react";
+import { Loader2, MapPin, PackageOpen, Clock, TrendingUp, Activity, RotateCw, XCircle } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,6 +40,7 @@ export default function DriverDashboard() {
   const pendingBookings = bookings?.filter(booking => booking.status === "pending") || [];
   const activeBookings = bookings?.filter(booking => booking.status === "accepted" || booking.status === "in_transit") || [];
   const completedBookings = bookings?.filter(booking => booking.status === "completed") || [];
+  const rejectedBookings = bookings?.filter(booking => booking.status === "rejected") || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,7 +53,7 @@ export default function DriverDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
@@ -82,6 +83,16 @@ export default function DriverDashboard() {
               <TrendingUp className="h-8 w-8 text-muted-foreground" />
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Rejected</p>
+                <p className="text-2xl font-bold">{rejectedBookings.length}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-muted-foreground" />
+            </CardContent>
+          </Card>
         </div>
         
         {/* Main Content with Tabs */}
@@ -92,6 +103,9 @@ export default function DriverDashboard() {
             </TabsTrigger>
             <TabsTrigger value="active" className="flex items-center gap-1">
               <Activity className="h-4 w-4" /> Active
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="flex items-center gap-1">
+              <XCircle className="h-4 w-4" /> Rejected
             </TabsTrigger>
             <TabsTrigger value="completed" className="flex items-center gap-1">
               <RotateCw className="h-4 w-4" /> History
@@ -182,6 +196,63 @@ export default function DriverDashboard() {
                               <div>
                                 <p className="text-sm font-medium">Dropoff Location</p>
                                 <p className="text-sm text-muted-foreground truncate">{booking.dropoffLocation}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Cargo</p>
+                                <p className="text-sm text-muted-foreground">{booking.cargoType.replace('_', ' ')} ({booking.cargoWeight} kg)</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="rejected" className="mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rejected Bookings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {rejectedBookings.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No rejected bookings</p>
+                ) : (
+                  <div className="space-y-4">
+                    {rejectedBookings.map((booking) => (
+                      <Card key={booking.id} className="overflow-hidden border">
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h3 className="font-semibold">{booking.vehicleType}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Rejected: {new Date(booking.updatedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setLocation(`/driver/bookings?id=${booking.id}`)}
+                            >
+                              Details
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Route</p>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {booking.pickupLocation.split(",")[0]} → {booking.dropoffLocation.split(",")[0]}
+                                </p>
                               </div>
                             </div>
                             
