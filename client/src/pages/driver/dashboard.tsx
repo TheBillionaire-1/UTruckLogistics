@@ -57,20 +57,20 @@ export default function DriverDashboard() {
           <Card>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Available Jobs</p>
+                <p className="text-sm text-green-500">Available Jobs</p>
                 <p className="text-2xl font-bold">{pendingBookings.length}</p>
               </div>
-              <PackageOpen className="h-8 w-8 text-muted-foreground" />
+              <PackageOpen className="h-8 w-8 text-green-500" />
             </CardContent>
           </Card>
           
           <Card>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Deliveries</p>
+                <p className="text-sm text-blue-500">Active Deliveries</p>
                 <p className="text-2xl font-bold">{activeBookings.length}</p>
               </div>
-              <Activity className="h-8 w-8 text-muted-foreground" />
+              <Activity className="h-8 w-8 text-blue-500" />
             </CardContent>
           </Card>
           
@@ -99,10 +99,10 @@ export default function DriverDashboard() {
         <Tabs defaultValue="available" className="w-full">
           <TabsList className="w-full justify-start mb-4">
             <TabsTrigger value="available" className="flex items-center gap-1">
-              <PackageOpen className="h-4 w-4" /> Available
+              <PackageOpen className="h-4 w-4 text-green-500" /> <span className="text-green-500">Available</span>
             </TabsTrigger>
             <TabsTrigger value="active" className="flex items-center gap-1">
-              <Activity className="h-4 w-4" /> Active
+              <Activity className="h-4 w-4 text-blue-500" /> <span className="text-blue-500">Active</span>
             </TabsTrigger>
             <TabsTrigger value="rejected" className="flex items-center gap-1">
               <XCircle className="h-4 w-4 text-red-500" /> <span className="text-red-500">Rejected</span>
