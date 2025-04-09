@@ -259,10 +259,19 @@ useEffect(() => {
     },
   });
 
-  // Get the latest booking regardless of status
-  const currentBooking = bookings?.[0];
+  // Get the booking ID from the URL
+  const bookingId = new URLSearchParams(window.location.search).get('id');
+  
+  // Find the specific booking by ID, or use the latest as a fallback
+  const currentBooking = bookingId && bookings ? 
+    bookings.find(booking => booking.id === parseInt(bookingId, 10)) || bookings[0] : 
+    bookings?.[0];
 
-  console.log(`[${new Date().toISOString()}] Current active booking after filtering:`, currentBooking);
+  console.log(`[${new Date().toISOString()}] Current booking after filtering:`, {
+    id: currentBooking?.id,
+    status: currentBooking?.status,
+    requestedBookingId: bookingId ? parseInt(bookingId, 10) : 'none'
+  });
 
   const handleStatusUpdate = (bookingId: number, status: BookingStatus) => {
     const beforeState = {...currentBooking};
