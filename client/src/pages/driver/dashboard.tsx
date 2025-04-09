@@ -36,11 +36,17 @@ export default function DriverDashboard() {
     );
   }
 
-  // Filter bookings by status
+  // Filter bookings by status - ensure they go to the correct dashboard tab
   const pendingBookings = bookings?.filter(booking => booking.status === "pending") || [];
   const activeBookings = bookings?.filter(booking => booking.status === "accepted" || booking.status === "in_transit") || [];
   const completedBookings = bookings?.filter(booking => booking.status === "completed") || [];
   const rejectedBookings = bookings?.filter(booking => booking.status === "rejected") || [];
+  
+  // Log each category for debugging
+  console.log("[" + new Date().toISOString() + "] Pending bookings:", pendingBookings);
+  console.log("[" + new Date().toISOString() + "] Active bookings:", activeBookings);
+  console.log("[" + new Date().toISOString() + "] Completed bookings:", completedBookings);
+  console.log("[" + new Date().toISOString() + "] Rejected bookings:", rejectedBookings);
 
   return (
     <div className="min-h-screen bg-background">
