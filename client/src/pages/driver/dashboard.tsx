@@ -87,10 +87,10 @@ export default function DriverDashboard() {
           <Card>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Rejected</p>
+                <p className="text-sm text-red-500">Rejected</p>
                 <p className="text-2xl font-bold">{rejectedBookings.length}</p>
               </div>
-              <XCircle className="h-8 w-8 text-muted-foreground" />
+              <XCircle className="h-8 w-8 text-red-500" />
             </CardContent>
           </Card>
         </div>
@@ -105,7 +105,7 @@ export default function DriverDashboard() {
               <Activity className="h-4 w-4" /> Active
             </TabsTrigger>
             <TabsTrigger value="rejected" className="flex items-center gap-1">
-              <XCircle className="h-4 w-4" /> Rejected
+              <XCircle className="h-4 w-4 text-red-500" /> <span className="text-red-500">Rejected</span>
             </TabsTrigger>
             <TabsTrigger value="completed" className="flex items-center gap-1">
               <RotateCw className="h-4 w-4" /> History
@@ -232,8 +232,9 @@ export default function DriverDashboard() {
                           <div className="flex justify-between items-start mb-4">
                             <div>
                               <h3 className="font-semibold">{booking.vehicleType}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Rejected: {new Date(booking.updatedAt).toLocaleDateString()}
+                              <p className="text-sm flex items-center">
+                                <span className="text-red-500 font-medium">Rejected:</span>
+                                <span className="text-muted-foreground ml-1">{new Date(booking.updatedAt).toLocaleDateString()}</span>
                               </p>
                             </div>
                             <Button 
