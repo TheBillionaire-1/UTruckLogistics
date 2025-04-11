@@ -2,7 +2,9 @@
 Welcome to the UTruckLogistics repository! This project is a full-stack web application designed to revolutionize cargo and freight logistics, offering seamless solutions for businesses to manage cargo transportation with real-time tracking, efficient routing, and robust data management. Built with modern technologies, UTruckLogistics ensures scalability, reliability, and an exceptional user experience for both shippers and carriers.
 
 ## Project Overview
-UTruckLogistics is a comprehensive cargo logistics platform that simplifies the process of managing shipments. By leveraging cutting-edge tools and frameworks, it provides features such as:
+UTruckLogistics is a comprehensive cargo on-demand services platform that simplifies the process of solicting a cargo service. By leveraging cutting-edge tools and frameworks, it provides features such as:
+
+Any Cargo Vehicle and Type Service Request: Any cargo vehicle and type service request with a couple of clicks.
 
 Real-Time Tracking: Monitor cargo movement in real time using interactive maps.
 
@@ -14,7 +16,7 @@ User Authentication & Security: Secure access for shippers, carriers, and admini
 
 Interactive UI: A user-friendly interface for both desktop and mobile users.
 
-This platform is ideal for businesses seeking to streamline their supply chain operations while maintaining transparency and efficiency.
+This platform is ideal for regular customers and businesses seeking to streamline their cargo services and supply chain operations while maintaining transparency and efficiency.
 
 # Features
 ## Core Functionalities
