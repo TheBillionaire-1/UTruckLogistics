@@ -69,6 +69,13 @@ export default function CustomerDashboard() {
     booking => booking.status === "cancelled"
   ) || [];
   
+  // Double-check to make sure the bookings are correctly filtered
+  console.log("[FILTERED] Pending bookings:", pendingBookings.map(b => ({ id: b.id, status: b.status })));
+  console.log("[FILTERED] Active bookings:", activeBookings.map(b => ({ id: b.id, status: b.status })));
+  console.log("[FILTERED] Completed bookings:", completedBookings.map(b => ({ id: b.id, status: b.status })));
+  console.log("[FILTERED] Rejected bookings:", rejectedBookings.map(b => ({ id: b.id, status: b.status })));
+  console.log("[FILTERED] Cancelled bookings:", cancelledBookings.map(b => ({ id: b.id, status: b.status })));
+  
   // Log each category for debugging
   console.log("[" + new Date().toISOString() + "] Pending bookings:", pendingBookings);
   console.log("[" + new Date().toISOString() + "] Active bookings:", activeBookings);
