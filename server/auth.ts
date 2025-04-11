@@ -39,19 +39,25 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log(`Authenticating user: ${username}`);
         const user = await storage.getUserByUsername(username);
         
         if (!user) {
+          console.log(`User not found: ${username}`);
           return done(null, false);
         }
         
+        console.log(`Found user: ${user.username}, comparing passwords`);
         // In a real app, we would use proper password hashing
         if (user.password !== password) {
+          console.log('Password mismatch');
           return done(null, false);
         }
         
+        console.log(`Authentication successful for: ${user.username}`);
         return done(null, { id: user.id, username: user.username });
       } catch (error) {
+        console.error('Authentication error:', error);
         return done(error);
       }
     }),
@@ -75,20 +81,25 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req: Request, res: Response) => {
     try {
       const userData = req.body;
+      console.log("Registration attempt:", JSON.stringify(userData, null, 2));
       
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
+        console.log("Username already exists:", userData.username);
         return res.status(400).json({ message: "Username already exists" });
       }
       
       const user = await storage.createUser(userData);
+      console.log("User created successfully:", JSON.stringify(user, null, 2));
       
       // Automatically log in the user after registration
       req.login({ id: user.id, username: user.username }, (err) => {
         if (err) {
+          console.error("Login after registration failed:", err);
           return res.status(500).json({ message: "Error during login after registration" });
         }
+        console.log("User logged in after registration:", user.id, user.username);
         res.status(201).json({ id: user.id, username: user.username });
       });
     } catch (error: any) {
@@ -98,17 +109,23 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
+    console.log("Login attempt:", JSON.stringify(req.body, null, 2));
+    
     passport.authenticate("local", (err: any, user: any) => {
       if (err) {
+        console.error("Login error:", err);
         return next(err);
       }
       if (!user) {
+        console.log("Login failed: Invalid username or password");
         return res.status(401).send("Invalid username or password");
       }
       req.login(user, (err) => {
         if (err) {
+          console.error("Login session error:", err);
           return next(err);
         }
+        console.log("Login successful for user:", user.username);
         return res.status(200).json(user);
       });
     })(req, res, next);

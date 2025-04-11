@@ -22,6 +22,7 @@ export const users = pgTable("users", {
   email: text("email"),
   phoneNumber: text("phone_number"),
   profileImage: text("profile_image"),
+  role: text("role"),
 });
 
 // Enhanced bookings table with additional fields
@@ -48,6 +49,7 @@ export const insertUserSchema = createInsertSchema(users).extend({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
   profileImage: z.string().optional(),
+  role: z.enum(["customer", "driver"]).optional(),
 });
 
 export const insertBookingSchema = createInsertSchema(bookings)
