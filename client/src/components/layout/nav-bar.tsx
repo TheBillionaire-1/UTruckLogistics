@@ -25,7 +25,7 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
         </Link>
 
         <div className="flex items-center gap-4">
-          {user && (
+          {user ? (
             <>
               {isDashboardVisible && (
                 <Link href={isDriverPage ? "/booking/details" : "/driver/bookings"}>
@@ -47,6 +47,10 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
                 Logout
               </Button>
             </>
+          ) : (
+            <Link href="/auth">
+              <Button variant="outline">Login / Register</Button>
+            </Link>
           )}
         </div>
       </div>

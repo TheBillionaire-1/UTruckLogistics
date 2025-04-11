@@ -2,8 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Truck, Package, MapPin, Clock } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -17,11 +20,19 @@ export default function HomePage() {
             From small deliveries to large freight, we connect you with reliable
             transport services tailored to your needs.
           </p>
-          <Link href="/booking">
-            <Button size="lg" className="font-semibold">
-              Book Transport Now
-            </Button>
-          </Link>
+          {user ? (
+            <Link href="/booking">
+              <Button size="lg" className="font-semibold">
+                Book Transport Now
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/auth">
+              <Button size="lg" className="font-semibold">
+                Login to Book Transport
+              </Button>
+            </Link>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
