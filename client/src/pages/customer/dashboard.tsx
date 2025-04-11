@@ -28,6 +28,17 @@ export default function CustomerDashboard() {
       setLocation("/");
     }
   }, [user, setLocation]);
+  
+  // Effect to sync Tabs with activeTab state
+  useEffect(() => {
+    if (activeTab) {
+      // Update the UI to show the tab content and sync with the Tabs component
+      toast({
+        title: `Showing ${activeTab} bookings`,
+        duration: 1500,
+      });
+    }
+  }, [activeTab, toast]);
 
   if (isLoading) {
     return (
@@ -144,87 +155,233 @@ export default function CustomerDashboard() {
           </Card>
         </div>
         
-        {/* Current Transport Card */}
-        {latestActiveBooking && (latestActiveBooking.status === "accepted" || latestActiveBooking.status === "in_transit") ? (
-          <Card className="mb-6 border-l-4 border-l-primary">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Current Transport</h2>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Car className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-medium">{latestActiveBooking.vehicleType}</span>
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      latestActiveBooking.status === "in_transit" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"
-                    } uppercase`}>
-                      {latestActiveBooking.status.replace("_", " ")}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 mt-4">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">Pickup</p>
-                        <p className="text-sm text-muted-foreground">{latestActiveBooking.pickupLocation}</p>
+        {/* Content Section - Based on activeTab state */}
+        {(activeTab === "" || activeTab === "pending") && (
+          <Card className="mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle>Pending Bookings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No pending bookings</p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-yellow-500">Pending Approval</p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setLocation("/booking/details")}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Pickup</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.pickupLocation}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Dropoff</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.dropoffLocation}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">Dropoff</p>
-                        <p className="text-sm text-muted-foreground">{latestActiveBooking.dropoffLocation}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-2">
-                      <PackageOpen className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium">Cargo</p>
-                        <p className="text-sm text-muted-foreground">
-                          {latestActiveBooking.cargoType.replace("_", " ")} - {latestActiveBooking.cargoWeight} kg
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    </Card>
+                  ))}
                 </div>
-                
-                <div className="flex flex-col gap-2 justify-center">
-                  <Button 
-                    onClick={() => setLocation("/booking/details")}
-                    variant="outline" 
-                    className="w-full md:w-auto"
-                  >
-                    View Details
-                  </Button>
-                  
-                  {latestActiveBooking.status === "in_transit" && (
-                    <Button 
-                      onClick={() => setLocation("/tracking")}
-                      className="w-full md:w-auto"
-                    >
-                      <MapIcon className="h-4 w-4 mr-2" />
-                      Track Transport
-                    </Button>
-                  )}
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
-        ) : (
-          <Card className="mb-6">
-            <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold mb-2">No Active Transports</h2>
-                <p className="text-muted-foreground">You don't have any active bookings</p>
-              </div>
-              <Button 
-                onClick={() => setLocation("/booking")}
-                className="mt-4 md:mt-0"
+        )}
+        
+        {activeTab === "active" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Active Transports</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
               >
-                Book Transport
-              </Button>
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {activeBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No active transports</p>
+              ) : (
+                <div className="space-y-4">
+                  {activeBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-muted-foreground">Status: <span className="capitalize">{booking.status.replace('_', ' ')}</span></p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setLocation(booking.status === "in_transit" ? "/tracking" : "/booking/details")}
+                          >
+                            {booking.status === "in_transit" ? "Track" : "Details"}
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Pickup</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.pickupLocation}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Dropoff</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.dropoffLocation}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Cargo</p>
+                              <p className="text-sm text-muted-foreground">{booking.cargoType.replace('_', ' ')} ({booking.cargoWeight} kg)</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "rejected" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Rejected Bookings</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {rejectedBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No rejected bookings</p>
+              ) : (
+                <div className="space-y-4">
+                  {rejectedBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm flex items-center">
+                              <span className="text-red-500 font-medium">Rejected:</span>
+                              <span className="text-muted-foreground ml-1">{new Date(booking.updatedAt).toLocaleDateString()}</span>
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setLocation("/booking/details")}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Route</p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {booking.pickupLocation.split(",")[0]} → {booking.dropoffLocation.split(",")[0]}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "completed" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Completed Transports</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {completedBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No completed transports</p>
+              ) : (
+                <div className="space-y-4">
+                  {completedBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Completed: {new Date(booking.updatedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setLocation("/booking/details")}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="flex items-start gap-2 mt-4">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Route</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {booking.pickupLocation.split(",")[0]} → {booking.dropoffLocation.split(",")[0]}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
