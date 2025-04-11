@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Truck } from "lucide-react";
+import { Truck, Home, Package } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 type NavBarProps = {
@@ -11,34 +11,104 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
 
+  // Determine if we're currently on a driver page by checking both the prop and the URL path
   const isDriverPage = currentPage === "driver" || location.startsWith("/driver");
-  const isDashboardVisible = location !== "/" && user;
+  console.log(`NavBar render - currentPage: ${currentPage}, location: ${location}, isDriverPage: ${isDriverPage}`);
+  const isDashboardVisible = user && user.role;
+  const homePath = user && user.role === "customer" ? "/customer/dashboard" : user && user.role === "driver" ? "/driver/dashboard" : "/";
 
   return (
     <nav className="border-b bg-background">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/">
-          <div className="flex items-center gap-2 font-semibold text-lg cursor-pointer">
+        <div className="flex items-center gap-2 font-semibold text-lg">
+          <Button 
+            variant="ghost" 
+            className="p-0"
+            onClick={() => {
+              // Force a full page reload to navigate to the landing page
+              window.location.href = "/?force=landing";
+            }}
+          >
             <Truck className="h-6 w-6" />
-            UTruck
-          </div>
-        </Link>
+            <span className="ml-2">UTruck</span>
+          </Button>
+        </div>
 
         <div className="flex items-center gap-4">
-          {user ? (
+          {user && (
             <>
+              {/* Dashboard Link */}
               {isDashboardVisible && (
-                <Link href={isDriverPage ? "/booking/details" : "/driver/bookings"}>
-                  <Button variant="ghost">
-                    {isDriverPage ? "Customer Dashboard" : "Driver Dashboard"}
+                <a 
+                  href={user.role === "customer" ? "/customer/dashboard" : "/driver/dashboard"} 
+                  className="no-underline"
+                >
+                  <Button variant="ghost" className="flex items-center gap-1">
+                    <Home className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </Button>
+                </a>
+              )}
+              
+              {/* Role Switching Link - temporary for dev purposes */}
+              {isDashboardVisible && (
+                <Button 
+                  variant="ghost"
+                  onClick={async () => {
+                    try {
+                      // Get the current user role first to determine the target role
+                      const targetRole = user.role === "driver" ? "customer" : "driver";
+                      console.log(`Current user role: ${user.role}, switching to: ${targetRole}`);
+                      
+                      // First update the user role in the database via API call
+                      const updateRoleResponse = await fetch('/api/user/role', {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ role: targetRole })
+                      });
+                      
+                      if (!updateRoleResponse.ok) {
+                        throw new Error(`Failed to update role: ${updateRoleResponse.statusText}`);
+                      }
+                      
+                      // After role update, redirect to the appropriate dashboard
+                      const targetPath = targetRole === "driver" ? "/driver/dashboard" : "/customer/dashboard";
+                      console.log(`Role updated successfully. Redirecting to: ${targetPath}`);
+                      
+                      // Use window.location.replace for a cleaner navigation
+                      window.location.replace(targetPath);
+                    } catch (error) {
+                      console.error("Error during role switching:", error);
+                      alert("Failed to switch roles. Please try again.");
+                    }
+                  }}
+                >
+                  Switch to {isDriverPage ? "Customer" : "Driver"} View
+                </Button>
+              )}
+              
+              {/* Book Transport - only visible for customers */}
+              {user.role === "customer" && (
+                <Link href="/booking">
+                  <Button variant="ghost" className="flex items-center gap-1">
+                    <Package className="h-4 w-4" />
+                    <span>Book Transport</span>
                   </Button>
                 </Link>
               )}
-              {!isDriverPage && (
-                <Link href="/booking">
-                  <Button variant="ghost">Book Transport</Button>
+              
+              {/* Driver-specific Navigation - only visible for drivers */}
+              {user.role === "driver" && (
+                <Link href="/driver/bookings">
+                  <Button variant="ghost">
+                    Manage Bookings
+                  </Button>
                 </Link>
               )}
+              
+              {/* Logout Button */}
               <Button
                 variant="outline"
                 onClick={() => logoutMutation.mutate()}
@@ -47,10 +117,6 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
                 Logout
               </Button>
             </>
-          ) : (
-            <Link href="/auth">
-              <Button variant="outline">Login / Register</Button>
-            </Link>
           )}
         </div>
       </div>

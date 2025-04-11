@@ -1,34 +1,33 @@
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { Booking } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Booking, BookingStatus } from "@shared/schema";
-import { Loader2, Package, Truck, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Loader2, MapPin, PackageOpen, Clock, TrendingUp, Activity, RotateCw, XCircle, X } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DriverDashboard() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("available");
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
-  
-  // State to track which sections are visible
-  const [visibleSections, setVisibleSections] = useState({
-    available: true,
-    active: true,
-    completed: true,
-    rejected: true,
-  });
 
-  // Hide a section
-  const hideSection = (section: keyof typeof visibleSections) => {
-    setVisibleSections(prev => ({
-      ...prev,
-      [section]: false
-    }));
-  };
+  // Redirect to role selection if user doesn't have a role
+  useEffect(() => {
+    if (user && !user.role) {
+      setLocation("/role-selection");
+    } else if (user && user.role !== "driver") {
+      // If user has a different role, redirect to the appropriate dashboard
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   if (isLoading) {
     return (
@@ -38,282 +37,318 @@ export default function DriverDashboard() {
     );
   }
 
-  // Filter bookings by status
-  const availableBookings = bookings?.filter(booking => booking.status === BookingStatus.PENDING) || [];
-  const activeBookings = bookings?.filter(
-    booking => booking.status === BookingStatus.ACCEPTED || booking.status === BookingStatus.IN_TRANSIT
-  ) || [];
-  const completedBookings = bookings?.filter(booking => booking.status === BookingStatus.COMPLETED) || [];
-  const rejectedBookings = bookings?.filter(booking => booking.status === BookingStatus.CANCELLED) || [];
-
-  // Function to navigate to booking management
-  const goToBookingManagement = () => {
-    setLocation("/driver/bookings");
-  };
+  // Filter bookings by status - ensure they go to the correct dashboard tab
+  const pendingBookings = bookings?.filter(booking => booking.status === "pending") || [];
+  const activeBookings = bookings?.filter(booking => booking.status === "accepted" || booking.status === "in_transit") || [];
+  const completedBookings = bookings?.filter(booking => booking.status === "completed") || [];
+  const rejectedBookings = bookings?.filter(booking => booking.status === "rejected") || [];
+  
+  // Log each category for debugging
+  console.log("[" + new Date().toISOString() + "] Pending bookings:", pendingBookings);
+  console.log("[" + new Date().toISOString() + "] Active bookings:", activeBookings);
+  console.log("[" + new Date().toISOString() + "] Completed bookings:", completedBookings);
+  console.log("[" + new Date().toISOString() + "] Rejected bookings:", rejectedBookings);
 
   return (
     <div className="min-h-screen bg-background">
       <NavBar currentPage="driver" />
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Driver Dashboard</h1>
-        
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard 
-            title="Available Jobs" 
-            value={availableBookings.length} 
-            icon={Package} 
-            color="bg-green-100 text-green-700"
-            onClick={goToBookingManagement}
-          />
-          <StatCard 
-            title="Active Deliveries" 
-            value={activeBookings.length} 
-            icon={Truck} 
-            color="bg-blue-100 text-blue-700"
-            onClick={goToBookingManagement}
-          />
-          <StatCard 
-            title="Completed Jobs" 
-            value={completedBookings.length} 
-            icon={CheckCircle} 
-            color="bg-emerald-100 text-emerald-700"
-            onClick={goToBookingManagement}
-          />
-          <StatCard 
-            title="Rejected Jobs" 
-            value={rejectedBookings.length} 
-            icon={XCircle} 
-            color="bg-red-100 text-red-700"
-            onClick={goToBookingManagement}
-          />
+      
+      <main className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Driver Dashboard</h1>
+          <Button onClick={() => setLocation("/driver/history")} variant="outline">
+            <span className="mr-1">View History</span>
+            <RotateCw className="h-4 w-4" />
+          </Button>
         </div>
-        
-        {/* Available Jobs Section */}
-        {visibleSections.available && (
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl">Available Jobs</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => hideSection('available')}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4 text-gray-500" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {availableBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {availableBookings.map(booking => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
-                      onClick={goToBookingManagement}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No available jobs found</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Active Deliveries Section */}
-        {visibleSections.active && (
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl">Active Deliveries</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => hideSection('active')}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4 text-gray-500" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {activeBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {activeBookings.map(booking => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
-                      onClick={goToBookingManagement}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No active deliveries found</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Completed Jobs Section */}
-        {visibleSections.completed && (
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl">Completed Jobs</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => hideSection('completed')}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4 text-gray-500" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {completedBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {completedBookings.map(booking => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
-                      onClick={goToBookingManagement}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No completed jobs found</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Rejected Jobs Section */}
-        {visibleSections.rejected && (
-          <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xl">Rejected Jobs</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => hideSection('rejected')}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4 text-gray-500" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {rejectedBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {rejectedBookings.map(booking => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
-                      onClick={goToBookingManagement}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No rejected jobs found</p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
-  );
-}
 
-// Statistic Card Component
-function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color,
-  onClick
-}: { 
-  title: string; 
-  value: number; 
-  icon: any; 
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <Card 
-      className={`hover:shadow-md transition-all cursor-pointer ${color} border-none`} 
-      onClick={onClick}
-    >
-      <CardContent className="p-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium opacity-80">{title}</p>
-          <p className="text-3xl font-bold mt-1">{value}</p>
-        </div>
-        <Icon className="h-8 w-8" />
-      </CardContent>
-    </Card>
-  );
-}
 
-// Booking Card Component
-function BookingCard({ 
-  booking, 
-  onClick 
-}: { 
-  booking: Booking; 
-  onClick: () => void;
-}) {
-  const formatDate = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString();
-  };
-
-  const getVehicleIcon = (vehicleType: string) => {
-    if (vehicleType.includes('3.5')) return 'Small Van';
-    if (vehicleType.includes('7.5')) return 'Medium Truck';
-    if (vehicleType.includes('18')) return 'Large Truck';
-    return vehicleType;
-  };
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case BookingStatus.PENDING:
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case BookingStatus.ACCEPTED:
-        return "text-blue-600 bg-blue-50 border-blue-200";
-      case BookingStatus.IN_TRANSIT:
-        return "text-purple-600 bg-purple-50 border-purple-200";
-      case BookingStatus.COMPLETED:
-        return "text-green-600 bg-green-50 border-green-200";
-      case BookingStatus.CANCELLED:
-        return "text-red-600 bg-red-50 border-red-200";
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
-    }
-  };
-
-  return (
-    <Card 
-      className="border hover:shadow-md transition-all cursor-pointer" 
-      onClick={onClick}
-    >
-      <CardContent className="p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="border p-2 rounded-full">
-            <Truck className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <div className="font-medium">{getVehicleIcon(booking.vehicleType)}</div>
-            <div className="text-sm text-muted-foreground">
-              {formatDate(booking.createdAt)} • Order #{booking.id}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <span 
-            className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(booking.status)}`}
+        {/* Stats Cards - Now Clickable with State-Based Tab Control */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("available")}
           >
-            {booking.status.replace('_', ' ')}
-          </span>
-          <Button size="sm" variant="outline">Details</Button>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-500">Available Jobs</p>
+                <p className="text-2xl font-bold">{pendingBookings.length}</p>
+              </div>
+              <PackageOpen className="h-8 w-8 text-green-500" />
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("active")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-500">Active Deliveries</p>
+                <p className="text-2xl font-bold">{activeBookings.length}</p>
+              </div>
+              <Activity className="h-8 w-8 text-blue-500" />
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("completed")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{completedBookings.length}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-muted-foreground" />
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("rejected")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-red-500">Rejected</p>
+                <p className="text-2xl font-bold">{rejectedBookings.length}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-500" />
+            </CardContent>
+          </Card>
         </div>
-      </CardContent>
-    </Card>
+        
+        {/* Content Section - Based on activeTab state */}
+        {activeTab === "available" && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Available Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No available jobs</p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-muted-foreground">Cargo: {booking.cargoType.replace('_', ' ')} ({booking.cargoWeight} kg)</p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setLocation(`/driver/bookings?id=${booking.id}`)}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Pickup</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.pickupLocation}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Dropoff</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.dropoffLocation}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "active" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Active Deliveries</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {activeBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No active deliveries</p>
+              ) : (
+                <div className="space-y-4">
+                  {activeBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-muted-foreground">Status: <span className="capitalize">{booking.status.replace('_', ' ')}</span></p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => setLocation(`/driver/bookings?id=${booking.id}`)}
+                          >
+                            Manage
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Dropoff Location</p>
+                              <p className="text-sm text-muted-foreground truncate">{booking.dropoffLocation}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Cargo</p>
+                              <p className="text-sm text-muted-foreground">{booking.cargoType.replace('_', ' ')} ({booking.cargoWeight} kg)</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "rejected" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Rejected Bookings</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {rejectedBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No rejected bookings</p>
+              ) : (
+                <div className="space-y-4">
+                  {rejectedBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm flex items-center">
+                              <span className="text-red-500 font-medium">Rejected:</span>
+                              <span className="text-muted-foreground ml-1">{new Date(booking.updatedAt).toLocaleDateString()}</span>
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setLocation(`/driver/bookings?id=${booking.id}`)}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Route</p>
+                              <p className="text-sm text-muted-foreground truncate">
+                                {booking.pickupLocation.split(",")[0]} → {booking.dropoffLocation.split(",")[0]}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-start gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Cargo</p>
+                              <p className="text-sm text-muted-foreground">{booking.cargoType.replace('_', ' ')} ({booking.cargoWeight} kg)</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        
+        {activeTab === "completed" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle>Delivery History</CardTitle>
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setActiveTab("")}
+              >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+              </button>
+            </CardHeader>
+            <CardContent>
+              {completedBookings.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No completed deliveries</p>
+              ) : (
+                <div className="space-y-4">
+                  {completedBookings.map((booking) => (
+                    <Card key={booking.id} className="overflow-hidden border">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">{booking.vehicleType}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Completed: {new Date(booking.updatedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setLocation(`/driver/bookings?id=${booking.id}`)}
+                          >
+                            Details
+                          </Button>
+                        </div>
+                        
+                        <div className="flex items-start gap-2 mt-4">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Route</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {booking.pickupLocation.split(",")[0]} → {booking.dropoffLocation.split(",")[0]}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </main>
+    </div>
   );
 }

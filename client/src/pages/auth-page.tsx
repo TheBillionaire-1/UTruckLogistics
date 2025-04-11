@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,10 +37,12 @@ export default function AuthPage() {
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  // Use useEffect to handle navigation after render only if the user has a role
+  useEffect(() => {
+    if (user && user.role) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

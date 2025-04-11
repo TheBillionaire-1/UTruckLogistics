@@ -11,17 +11,29 @@ import BookingDetailsPage from "@/pages/booking-details";
 import TrackingPage from "@/pages/tracking-page";
 import DriverBookingManagement from "@/pages/driver/booking-management";
 import DriverDashboard from "@/pages/driver/dashboard";
+import DriverHistory from "@/pages/driver/history";
+import CustomerDashboard from "@/pages/customer/dashboard";
+import RoleSelectionPage from "@/pages/role-selection-page";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={HomePage} />
-      <ProtectedRoute path="/booking" component={BookingPage} />
-      <ProtectedRoute path="/booking/details" component={BookingDetailsPage} />
-      <ProtectedRoute path="/tracking" component={TrackingPage} />
-      <ProtectedRoute path="/driver/dashboard" component={DriverDashboard} />
-      <ProtectedRoute path="/driver/bookings" component={DriverBookingManagement} />
+      
+      {/* Customer Routes */}
+      <ProtectedRoute path="/customer/dashboard" component={() => <CustomerDashboard />} />
+      <ProtectedRoute path="/booking" component={() => <BookingPage />} />
+      <ProtectedRoute path="/booking/details" component={() => <BookingDetailsPage />} />
+      
+      {/* Driver Routes */}
+      <ProtectedRoute path="/driver/dashboard" component={() => <DriverDashboard />} />
+      <ProtectedRoute path="/driver/bookings" component={() => <DriverBookingManagement />} />
+      <ProtectedRoute path="/driver/history" component={() => <DriverHistory />} />
+      
+      {/* Common Routes */}
+      <ProtectedRoute path="/tracking" component={() => <TrackingPage />} />
+      <ProtectedRoute path="/role-selection" component={() => <RoleSelectionPage />} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

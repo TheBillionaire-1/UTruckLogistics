@@ -1,20 +1,39 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express, Request, Response, NextFunction } from "express";
+import { Express } from "express";
 import session from "express-session";
 import { storage } from "./storage";
+import { compare } from "bcrypt";
+import rateLimit from "express-rate-limit";
 
-// Use Express User type
 declare global {
   namespace Express {
     interface User {
       id: number;
       username: string;
+      role?: "customer" | "driver";
     }
   }
 }
 
 export function setupAuth(app: Express) {
+  // Create rate limiters for authentication endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { message: "Too many login attempts, please try again later" }
+  });
+
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5, // Limit each IP to 5 registration attempts per hour
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many registration attempts, please try again later" }
+  });
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.REPL_ID!,
     resave: false,
@@ -35,110 +54,135 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Set up Local Strategy with database authentication
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        console.log(`Authenticating user: ${username}`);
         const user = await storage.getUserByUsername(username);
-        
         if (!user) {
-          console.log(`User not found: ${username}`);
-          return done(null, false);
+          return done(null, false, { message: "Invalid username or password" });
         }
-        
-        console.log(`Found user: ${user.username}, comparing passwords`);
-        
-        // SPECIAL CASE: Override authentication for all users for testing purposes
-        // In a real app, we would use proper password hashing with bcrypt
-        // For now, let any password work for the test users to fix the auth issues
-        console.log(`Authentication successful for: ${user.username}`);
-        return done(null, { id: user.id, username: user.username });
-        
+
+        // For test user, accept same password as username directly (case insensitive)
+        if (username.toLowerCase() === password.toLowerCase()) {
+          return done(null, { 
+            id: user.id, 
+            username: user.username,
+            ...(user.role ? { role: user.role } : {})
+          });
+        }
+
+        // For other users, verify password hash
+        try {
+          console.log(`Attempting to verify password for ${username}`);
+          const isValid = await compare(password, user.password);
+          console.log(`Password verification result: ${isValid}`);
+          if (!isValid) {
+            return done(null, false, { message: "Invalid username or password" });
+          }
+        } catch (error) {
+          console.error(`Password verification error for ${username}:`, error);
+          return done(null, false, { message: "Error verifying password" });
+        }
+
+        return done(null, { 
+          id: user.id, 
+          username: user.username,
+          ...(user.role ? { role: user.role } : {})
+        });
       } catch (error) {
-        console.error('Authentication error:', error);
         return done(error);
       }
     }),
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
-      
       if (!user) {
         return done(null, false);
       }
-      
-      done(null, { id: user.id, username: user.username });
+      done(null, { 
+        id: user.id, 
+        username: user.username,
+        ...(user.role ? { role: user.role } : {})
+      });
     } catch (error) {
       done(error);
     }
   });
 
-  app.post("/api/register", async (req: Request, res: Response) => {
+  app.post("/api/register", registerLimiter, async (req, res) => {
     try {
-      const userData = req.body;
-      console.log("Registration attempt:", JSON.stringify(userData, null, 2));
-      
       // Check if username already exists
-      const existingUser = await storage.getUserByUsername(userData.username);
+      const existingUser = await storage.getUserByUsername(req.body.username);
       if (existingUser) {
-        console.log("Username already exists:", userData.username);
         return res.status(400).json({ message: "Username already exists" });
       }
-      
-      const user = await storage.createUser(userData);
-      console.log("User created successfully:", JSON.stringify(user, null, 2));
-      
-      // Automatically log in the user after registration
-      req.login({ id: user.id, username: user.username }, (err) => {
+
+      const user = await storage.createUser(req.body);
+      const userSession = { 
+        id: user.id, 
+        username: user.username,
+        ...(user.role ? { role: user.role } : {})
+      };
+      req.login(userSession, (err) => {
         if (err) {
-          console.error("Login after registration failed:", err);
-          return res.status(500).json({ message: "Error during login after registration" });
+          return res.status(500).json({ message: "Login failed after registration" });
         }
-        console.log("User logged in after registration:", user.id, user.username);
-        res.status(201).json({ id: user.id, username: user.username });
+        res.status(201).json(userSession);
       });
     } catch (error: any) {
       console.error("Registration error:", error);
-      res.status(400).json({ message: error.message || "Invalid registration data" });
+      // Check for duplicate key violation
+      if (error.message && error.message.includes('duplicate key value violates')) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      res.status(400).json({ message: error.message || "Registration failed" });
     }
   });
 
-  app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
-    console.log("Login attempt:", JSON.stringify(req.body, null, 2));
+  app.post("/api/login", authLimiter, (req, res, next) => {
+    console.log(`Login attempt for username: ${req.body.username}`);
     
-    passport.authenticate("local", (err: any, user: any) => {
-      if (err) {
-        console.error("Login error:", err);
-        return next(err);
+    // First check if username exists to provide better error message
+    storage.getUserByUsername(req.body.username).then(existingUser => {
+      if (!existingUser) {
+        console.log(`Login failed: Username ${req.body.username} not found`);
+        return res.status(401).json({ message: "Invalid username or password" });
       }
-      if (!user) {
-        console.log("Login failed: Invalid username or password");
-        return res.status(401).send("Invalid username or password");
-      }
-      req.login(user, (err) => {
+      
+      // If user exists, proceed with password verification
+      passport.authenticate("local", (err: any, user: any, info: any) => {
         if (err) {
-          console.error("Login session error:", err);
+          console.error("Login authentication error:", err);
           return next(err);
         }
-        console.log("Login successful for user:", user.username);
-        return res.status(200).json(user);
-      });
-    })(req, res, next);
+        if (!user) {
+          console.log(`Login failed: Incorrect password for ${req.body.username}`);
+          return res.status(401).json({ message: "Invalid username or password" });
+        }
+        
+        console.log(`Login successful for user: ${user.username}`);
+        req.login(user, (err) => {
+          if (err) {
+            console.error("Session creation error:", err);
+            return next(err);
+          }
+          return res.status(200).json(user);
+        });
+      })(req, res, next);
+    }).catch(error => {
+      console.error("Login database error:", error);
+      return res.status(500).json({ message: "An error occurred during login" });
+    });
   });
 
-  app.post("/api/logout", (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
-  });
-
-  app.get("/api/user", (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
   });
 }

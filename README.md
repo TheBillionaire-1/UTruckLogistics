@@ -1,115 +1,96 @@
-# UTruckLogistics
-Welcome to the UTruckLogistics repository! This project is a full-stack web application designed to revolutionize cargo and freight logistics, offering seamless solutions for businesses to manage cargo transportation with real-time tracking, efficient routing, and robust data management. Built with modern technologies, UTruckLogistics ensures scalability, reliability, and an exceptional user experience for both shippers and carriers.
+# Cargo Transport Booking Platform
 
-## Project Overview
-UTruckLogistics is a comprehensive cargo on-demand services platform that simplifies the process of solicting a cargo service. By leveraging cutting-edge tools and frameworks, it provides features such as:
+A comprehensive web application for booking and managing cargo transport services with real-time tracking capabilities.
 
-Any Cargo Vehicle and Type Service Request: Any cargo vehicle and type service request with a couple of clicks.
+## Features
 
-Real-Time Tracking: Monitor cargo movement in real time using interactive maps.
+### For Customers
+- Create cargo transport bookings with detailed information
+- Select pickup and dropoff locations using interactive maps
+- Track shipments in real-time
+- View booking history and status updates
 
-Dynamic Route Optimization: Minimize transit times and costs with optimized routing algorithms.
+### For Service Operators (Drivers)
+- View and manage assigned transport requests
+- Accept or decline booking requests
+- Update booking status (accepted, in transit, completed)
+- Share real-time location data during transit
 
-Cargo Management: Manage shipments, schedules, and delivery statuses efficiently.
+## Technology Stack
 
-User Authentication & Security: Secure access for shippers, carriers, and administrators.
+### Frontend
+- React with TypeScript
+- TanStack Query for data fetching and cache management
+- Wouter for client-side routing
+- Leaflet.js for interactive maps
+- WebSockets for real-time tracking and updates
+- Tailwind CSS with shadcn/ui for styling
 
-Interactive UI: A user-friendly interface for both desktop and mobile users.
+### Backend
+- Express.js with TypeScript
+- PostgreSQL database with Drizzle ORM
+- RESTful API architecture
+- WebSocket server for real-time communications
+- Passport.js for authentication
 
-This platform is ideal for regular customers and businesses seeking to streamline their cargo services and supply chain operations while maintaining transparency and efficiency.
+## Getting Started
 
-# Features
-## Core Functionalities
-Shipper Portal: Create, manage, and track shipments with ease.
+### Prerequisites
+- Node.js 18+ installed
+- PostgreSQL database
 
-Carrier Dashboard: Accept shipment requests, update delivery statuses, and view earnings.
+### Installation
 
-Admin Panel: Manage users, monitor system performance, and generate reports.
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables in a `.env` file:
+   ```
+   DATABASE_URL=postgresql://user:password@localhost:5432/cargo_db
+   SESSION_SECRET=your_session_secret
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-Real-Time Notifications: Get instant updates on shipment statuses via WebSockets.
+## Project Structure
 
-## Technology Highlights
-Interactive Maps: Powered by Leaflet.js for route visualization and cargo tracking.
+- `client/` - Frontend React application
+  - `src/pages/` - Page components
+  - `src/hooks/` - Custom React hooks
+  - `src/lib/` - Utility functions and API client
+  - `src/components/` - Reusable UI components
+- `server/` - Backend Express application
+  - `routes.ts` - API route definitions
+  - `storage.ts` - Database interaction layer
+  - `auth.ts` - Authentication setup
+- `shared/` - Shared code between client and server
+  - `schema.ts` - Database schema definitions
 
-Data Validation: Ensures data integrity using Zod validation in forms.
+## Authentication Flow
 
-Animations: Enhances user experience with smooth transitions using Framer Motion.
+1. User registers with username, password, and profile information
+2. After successful registration, user selects their role (customer or driver)
+3. Based on role selection, user is directed to the appropriate interface
+4. Protected routes ensure users can only access authorized sections
 
-# General Specifications
-## Project Type
-Full-stack web application.
+## Documentation
 
-## Language
-TypeScript
+For more detailed documentation, see:
+- [Role Selection Implementation](./docs/ROLE_IMPLEMENTATION.md)
+- [Security Recommendations](./docs/SECURITY_RECOMMENDATIONS.md)
 
-## Backend
-Framework: Express.js
+## Roadmap
 
-Database: PostgreSQL (using @neondatabase/serverless for serverless environments)
+- Advanced booking management (cancellations, modifications)
+- Payment integration for transport services
+- Driver rating and review system
+- Enhanced analytics and reporting
+- Mobile application for better on-the-go access
 
-ORM: Drizzle ORM
+## License
 
-WebSockets: ws (for real-time communication)
-
-Authentication: Passport.js (with local strategy)
-
-Session Management:
-
-express-session
-
-connect-pg-simple (for storing sessions in PostgreSQL)
-
-memorystore
-
-## Frontend
-Framework: React
-
-UI Components: Radix UI, Shadcn UI
-
-State Management: React Query
-
-Routing: Wouter
-
-Form Management:
-
-React Hook Form
-
-Zod (for validation)
-
-## Build Tools
-Bundler: Vite
-
-Transpiler: esbuild
-
-Styling
-CSS-in-JS:
-
-Tailwind CSS
-
-tailwindcss-animate
-
-tailwind-merge
-
-Class Variance Authority (class-variance-authority)
-
-clsx
-
-Other Notable Libraries
-date-fns (for date manipulation)
-
-leaflet, react-leaflet (for maps)
-
-framer-motion (for animations)
-
-## Use Cases
-Small to medium-sized businesses looking to optimize their cargo shipping processes.
-
-Logistics companies aiming to provide transparent tracking services to their customers.
-
-Enterprises requiring a scalable solution to manage high-volume freight operations.
-
-## Contact
-For questions or support regarding UTruckLogistics:
-
-Email: support@utrucklogistics.com
-
+This project is licensed under the MIT License - see the LICENSE file for details.

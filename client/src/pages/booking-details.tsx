@@ -70,37 +70,60 @@ export default function BookingDetailsPage() {
           <CardHeader>
             <CardTitle>Booking Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="font-semibold">Vehicle Type</p>
-              <p className="text-muted-foreground">{latestBooking.vehicleType}</p>
-            </div>
-            <div>
-              <p className="font-semibold">Pickup Location</p>
-              <p className="text-muted-foreground">
-                {latestBooking.pickupLocation || "Not specified"}
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold">Dropoff Location</p>
-              <p className="text-muted-foreground">
-                {latestBooking.dropoffLocation || "Not specified"}
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold">Status</p>
-              <p className={`font-medium capitalize ${getStatusColor(latestBooking.status)}`}>
-                {latestBooking.status.replace('_', ' ')}
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold">Last Updated</p>
-              <p className="text-muted-foreground">
-                {new Date(latestBooking.updatedAt).toLocaleString()}
-              </p>
+          <CardContent className="space-y-6">
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <p className="font-semibold">Vehicle Type</p>
+                <p className="text-muted-foreground">{latestBooking.vehicleType}</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold">Cargo Type</p>
+                <p className="text-muted-foreground">
+                  {latestBooking.cargoType === "dry_goods" && "Dry Goods"}
+                  {latestBooking.cargoType === "food" && "Food"}
+                  {latestBooking.cargoType === "moving_services" && "Moving Services"}
+                  {!latestBooking.cargoType && "Not specified"}
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="font-semibold">Cargo Weight</p>
+                <p className="text-muted-foreground">
+                  {latestBooking.cargoWeight ? `${(latestBooking.cargoWeight / 1000).toFixed(1)} tons (${latestBooking.cargoWeight} kg)` : "Not specified"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold">Pickup Location</p>
+                <p className="text-muted-foreground break-words">
+                  {latestBooking.pickupLocation || "Not specified"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold">Dropoff Location</p>
+                <p className="text-muted-foreground break-words">
+                  {latestBooking.dropoffLocation || "Not specified"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold">Status</p>
+                <p className={`font-medium capitalize ${getStatusColor(latestBooking.status)}`}>
+                  {latestBooking.status.replace('_', ' ')}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold">Last Updated</p>
+                <p className="text-muted-foreground">
+                  {new Date(latestBooking.updatedAt).toLocaleString()}
+                </p>
+              </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4">
               {latestBooking.status === BookingStatus.PENDING && (
                 <Button
                   variant="destructive"

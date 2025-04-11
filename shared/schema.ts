@@ -8,10 +8,20 @@ export const BookingStatus = {
   ACCEPTED: "accepted",
   IN_TRANSIT: "in_transit",
   COMPLETED: "completed",
+  REJECTED: "rejected",
   CANCELLED: "cancelled",
 } as const;
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
+
+// Define cargo types
+export const CargoType = {
+  DRY_GOODS: "dry_goods",
+  FOOD: "food",
+  MOVING_SERVICES: "moving_services",
+} as const;
+
+export type CargoType = (typeof CargoType)[keyof typeof CargoType];
 
 // Enhanced user table with profile information
 export const users = pgTable("users", {
@@ -22,7 +32,7 @@ export const users = pgTable("users", {
   email: text("email"),
   phoneNumber: text("phone_number"),
   profileImage: text("profile_image"),
-  role: text("role"),
+  role: text("role").$type<"customer" | "driver">(),
 });
 
 // Enhanced bookings table with additional fields
@@ -30,6 +40,8 @@ export const bookings = pgTable("bookings", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   vehicleType: text("vehicle_type").notNull(),
+  cargoWeight: integer("cargo_weight").notNull().default(0),
+  cargoType: text("cargo_type").$type<CargoType>().notNull().default(CargoType.DRY_GOODS),
   pickupLocation: text("pickup_location").notNull(),
   dropoffLocation: text("dropoff_location").notNull(),
   pickupCoords: text("pickup_coords").notNull(),
@@ -55,6 +67,12 @@ export const insertUserSchema = createInsertSchema(users).extend({
 export const insertBookingSchema = createInsertSchema(bookings)
   .omit({ id: true, userId: true, updatedAt: true, createdAt: true })
   .extend({
+    cargoType: z.enum([
+      CargoType.DRY_GOODS,
+      CargoType.FOOD,
+      CargoType.MOVING_SERVICES,
+    ]),
+    cargoWeight: z.number().int().min(0).max(40000),
     pickupCoords: z.string(),
     dropoffCoords: z.string(),
     estimatedPrice: z.string().optional(),
@@ -69,6 +87,7 @@ export const updateBookingStatusSchema = z.object({
     BookingStatus.ACCEPTED,
     BookingStatus.IN_TRANSIT,
     BookingStatus.COMPLETED,
+    BookingStatus.REJECTED,
     BookingStatus.CANCELLED,
   ]),
 });

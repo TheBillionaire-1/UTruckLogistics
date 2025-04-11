@@ -1,10 +1,71 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { Truck, Package, MapPin, Clock } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Truck, Package, MapPin, Clock, Loader2 } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useAuth } from "@/hooks/use-auth";
 
+// This is our main HomePage component that handles routing logic
 export default function HomePage() {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // If user has a role, redirect to the appropriate dashboard
+  useEffect(() => {
+    // Check if there's a force parameter to show landing page regardless of login state
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceLanding = urlParams.get('force') === 'landing';
+    
+    // If force=landing is set, don't redirect and show the landing page
+    if (forceLanding) {
+      return;
+    }
+    
+    if (user && user.role === "customer") {
+      // Don't redirect if we're already on the dashboard
+      if (window.location.pathname === "/") {
+        setLocation("/customer/dashboard");
+      }
+    } else if (user && user.role === "driver") {
+      // Don't redirect if we're already on the dashboard
+      if (window.location.pathname === "/") {
+        setLocation("/driver/dashboard");
+      }
+    } else if (user && !user.role) {
+      // If user doesn't have a role yet, redirect to role selection
+      setLocation("/role-selection");
+    }
+    // We don't redirect for non-logged-in users - they see the landing page
+  }, [user, setLocation]);
+
+  // Check if force=landing parameter is set
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceLanding = urlParams.get('force') === 'landing';
+
+  // If still loading, show a loading spinner
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
+  // If user is not logged in or force=landing is set, show the landing page
+  if (!user || forceLanding) {
+    return <LandingPage />;
+  }
+
+  // If we're still on this page after logging in but before redirection, show loading
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+  );
+}
+
+// This is the landing page - shown to non-logged-in users and logged-in users with force=landing
+function LandingPage() {
   const { user } = useAuth();
   
   return (
@@ -20,16 +81,20 @@ export default function HomePage() {
             From small deliveries to large freight, we connect you with reliable
             transport services tailored to your needs.
           </p>
-          {user ? (
-            <Link href="/booking">
+          
+          {/* Show different buttons based on login state */}
+          {!user ? (
+            // For logged out users, show the Get Started button
+            <Link href="/auth">
               <Button size="lg" className="font-semibold">
-                Book Transport Now
+                Get Started
               </Button>
             </Link>
           ) : (
-            <Link href="/auth">
+            // For logged in users, show a button to their dashboard
+            <Link href={user.role === "customer" ? "/customer/dashboard" : "/driver/dashboard"}>
               <Button size="lg" className="font-semibold">
-                Login to Book Transport
+                Go to Dashboard
               </Button>
             </Link>
           )}
