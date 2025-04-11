@@ -18,10 +18,10 @@ export default function NavBar({ currentPage = "customer" }: NavBarProps) {
     <nav className="border-b bg-background">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/">
-          <a className="flex items-center gap-2 font-semibold text-lg">
+          <div className="flex items-center gap-2 font-semibold text-lg cursor-pointer">
             <Truck className="h-6 w-6" />
             UTruck
-          </a>
+          </div>
         </Link>
 
         <div className="flex items-center gap-4">

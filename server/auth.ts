@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { storage } from "./storage";
 
@@ -35,15 +35,22 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Set up Local Strategy with hardcoded test credentials
+  // Set up Local Strategy with database authentication
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
-        // Check for hardcoded test credentials
-        if (username === 'G' && password === 'G') {
-          return done(null, { id: 1, username: 'G' });
+        const user = await storage.getUserByUsername(username);
+        
+        if (!user) {
+          return done(null, false);
         }
-        return done(null, false);
+        
+        // In a real app, we would use proper password hashing
+        if (user.password !== password) {
+          return done(null, false);
+        }
+        
+        return done(null, { id: user.id, username: user.username });
       } catch (error) {
         return done(error);
       }
@@ -53,23 +60,44 @@ export function setupAuth(app: Express) {
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
-      // For test user, return hardcoded user object
-      if (id === 1) {
-        done(null, { id: 1, username: 'G' });
-        return;
+      const user = await storage.getUser(id);
+      
+      if (!user) {
+        return done(null, false);
       }
-      done(null, false);
+      
+      done(null, { id: user.id, username: user.username });
     } catch (error) {
       done(error);
     }
   });
 
-  app.post("/api/register", async (req, res) => {
-    // For test purposes, always return success with test user
-    res.status(201).json({ id: 1, username: 'G' });
+  app.post("/api/register", async (req: Request, res: Response) => {
+    try {
+      const userData = req.body;
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const user = await storage.createUser(userData);
+      
+      // Automatically log in the user after registration
+      req.login({ id: user.id, username: user.username }, (err) => {
+        if (err) {
+          return res.status(500).json({ message: "Error during login after registration" });
+        }
+        res.status(201).json({ id: user.id, username: user.username });
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: error.message || "Invalid registration data" });
+    }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate("local", (err: any, user: any) => {
       if (err) {
         return next(err);
@@ -86,14 +114,14 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res, next) => {
+  app.post("/api/logout", (req: Request, res: Response, next: NextFunction) => {
     req.logout((err) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });
