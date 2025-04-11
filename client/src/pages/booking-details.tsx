@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Booking, BookingStatus } from "@shared/schema";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -123,32 +123,43 @@ export default function BookingDetailsPage() {
               </div>
             </div>
 
-            <div className="flex gap-4">
-              {latestBooking.status === BookingStatus.PENDING && (
-                <Button
-                  variant="destructive"
-                  onClick={() =>
-                    statusMutation.mutate({
-                      bookingId: latestBooking.id,
-                      status: BookingStatus.CANCELLED,
-                    })
-                  }
-                  disabled={statusMutation.isPending}
-                >
-                  {statusMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Cancel Booking
-                </Button>
-              )}
-              {(latestBooking.status === BookingStatus.IN_TRANSIT) && (
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/tracking")}
-                >
-                  Track Your Service
-                </Button>
-              )}
+            <div className="flex justify-between">
+              <div className="flex gap-4">
+                {latestBooking.status === BookingStatus.PENDING && (
+                  <Button
+                    variant="destructive"
+                    onClick={() =>
+                      statusMutation.mutate({
+                        bookingId: latestBooking.id,
+                        status: BookingStatus.CANCELLED,
+                      })
+                    }
+                    disabled={statusMutation.isPending}
+                  >
+                    {statusMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Cancel Booking
+                  </Button>
+                )}
+                {(latestBooking.status === BookingStatus.IN_TRANSIT) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation("/tracking")}
+                  >
+                    Track Your Service
+                  </Button>
+                )}
+              </div>
+              
+              <Button 
+                variant="default"
+                className="bg-black hover:bg-gray-800 text-white"
+                onClick={() => setLocation("/customer/dashboard")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
             </div>
           </CardContent>
         </Card>
