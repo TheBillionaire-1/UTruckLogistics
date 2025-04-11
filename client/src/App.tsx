@@ -13,6 +13,7 @@ import DriverBookingManagement from "@/pages/driver/booking-management";
 import DriverDashboard from "@/pages/driver/dashboard";
 import DriverHistory from "@/pages/driver/history";
 import CustomerDashboard from "@/pages/customer/dashboard";
+import CustomerHistory from "@/pages/customer/history";
 import RoleSelectionPage from "@/pages/role-selection-page";
 import { ProtectedRoute } from "./lib/protected-route";
 
@@ -23,6 +24,7 @@ function Router() {
       
       {/* Customer Routes */}
       <ProtectedRoute path="/customer/dashboard" component={() => <CustomerDashboard />} />
+      <ProtectedRoute path="/customer/history" component={() => <CustomerHistory />} />
       <ProtectedRoute path="/booking" component={() => <BookingPage />} />
       <ProtectedRoute path="/booking/details" component={() => <BookingDetailsPage />} />
       

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Booking } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Package, Clock, TrendingUp, Activity, Car, History, X, XCircle } from "lucide-react";
+import { Loader2, MapPin, Package, Clock, TrendingUp, Activity, Car, History, X, XCircle, RotateCw } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -85,14 +85,24 @@ export default function CustomerDashboard() {
       <main className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Customer Dashboard</h1>
-          <Button 
-            onClick={() => setLocation("/booking")} 
-            className="bg-primary hover:bg-primary/90"
-            size="lg"
-          >
-            <Package className="mr-2 h-5 w-5" />
-            Book New Transport
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              onClick={() => setLocation("/booking")} 
+              className="bg-primary hover:bg-primary/90"
+              size="lg"
+            >
+              <Package className="mr-2 h-5 w-5" />
+              Book New Transport
+            </Button>
+            <Button 
+              onClick={() => setLocation("/customer/history")} 
+              variant="outline"
+              size="lg"
+            >
+              <RotateCw className="mr-2 h-4 w-4" />
+              View History
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards - Clickable with State-Based Tab Control */}
