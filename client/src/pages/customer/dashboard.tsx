@@ -1,17 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Booking } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, PackageOpen, Clock, History, Car, MapIcon, Package } from "lucide-react";
+import { Loader2, MapPin, PackageOpen, Clock, History, Car, MapIcon, Package, Activity, TrendingUp, XCircle, X } from "lucide-react";
 import NavBar from "@/components/layout/nav-bar";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("");
   const { data: bookings, isLoading } = useQuery<Booking[]>({
     queryKey: ["/api/bookings"],
   });
@@ -86,48 +89,57 @@ export default function CustomerDashboard() {
           </Button>
         </div>
 
-        {/* Current Transport Card */}
-        {/* Quick Booking Card - Always visible */}
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <Card className="md:col-span-2">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Quick Book</h2>
-                </div>
-                <p className="text-muted-foreground">Create a new booking for cargo transport services</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Button 
-                    onClick={() => setLocation("/booking")}
-                    variant="default"
-                    className="bg-primary/90 hover:bg-primary"
-                  >
-                    New Booking
-                  </Button>
-                </div>
+        {/* Stats Cards - Clickable with State-Based Tab Control */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("pending")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-yellow-500">Pending</p>
+                <p className="text-2xl font-bold">{pendingBookings.length}</p>
               </div>
+              <Clock className="h-8 w-8 text-yellow-500" />
             </CardContent>
           </Card>
           
-          {/* Stats Card */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase mb-4">Your Statistics</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Total Bookings</span>
-                  <span className="font-medium">{bookings?.length || 0}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Completed</span>
-                  <span className="font-medium">{completedBookings.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Active</span>
-                  <span className="font-medium">{activeBookings.length}</span>
-                </div>
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("active")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-500">Active Transports</p>
+                <p className="text-2xl font-bold">{activeBookings.length}</p>
               </div>
+              <Activity className="h-8 w-8 text-blue-500" />
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("completed")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">{completedBookings.length}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-muted-foreground" />
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow" 
+            onClick={() => setActiveTab("rejected")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-red-500">Rejected</p>
+                <p className="text-2xl font-bold">{rejectedBookings.length}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-500" />
             </CardContent>
           </Card>
         </div>
